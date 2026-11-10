@@ -19,13 +19,14 @@ private func eventually(_ condition: () -> Bool, sourceLocation: SourceLocation 
 private final class HostedApp {
     let host: NSHostingView<AnyView>
     let window: NSWindow
-    init<V: View>(_ view: V, width: CGFloat, height: CGFloat = 800) {
+    init<V: View>(_ view: V, width: CGFloat, height: CGFloat = 800, ambient: NSAppearance? = nil) {
         _ = NSApplication.shared
         host = NSHostingView(rootView: AnyView(view))
         host.sizingOptions = []
         window = NSWindow(contentRect: NSRect(x: -12000, y: -12000, width: width, height: height),
                           styleMask: [.titled], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
+        window.appearance = ambient
         window.contentView = host
         NSApplication.shared.accessibilitySetValue(true, forAttribute: NSAccessibility.Attribute(rawValue: "AXEnhancedUserInterface"))
         window.orderBack(nil)
@@ -160,12 +161,14 @@ struct NativeAppTests {
 
     @Test func quittingCancelsAnOpeningIsolatedRuntimeAndReleasesStorage() async throws {
         let session = AppSession(arguments: ["DurableChat", "--test-runtime"])
+        let suite = try #require(session.isolatedDefaultsName)
         let startup = Task { await session.start() }
         await Task.yield()
         await session.shutdown()
         await startup.value
         if let root = session.testDirectory { #expect(!FileManager.default.fileExists(atPath: root.path)) }
         #expect(session.settings == nil)
+        #expect(UserDefaults(suiteName: suite)?.persistentDomain(forName: suite)?.isEmpty != false)
     }
 }
 
@@ -269,6 +272,7 @@ extension NativeAppTests {
         let corrupt = Data("invalid routing archive".utf8)
         try corrupt.write(to: root.appendingPathComponent("routing.json"))
         let session = AppSession(arguments: ["DurableChat", "--test-runtime"], isolatedDirectory: root)
+        let suite = try #require(session.isolatedDefaultsName)
         await session.start()
         #expect(session.failure != nil && session.store == nil && session.settings == nil)
         #expect(try fixtureCalls(root).isEmpty)
@@ -278,6 +282,7 @@ extension NativeAppTests {
         await backend.shutdown(); await settings.shutdown()
         await session.shutdown()
         #expect(!FileManager.default.fileExists(atPath: root.path))
+        #expect(UserDefaults(suiteName: suite)?.persistentDomain(forName: suite)?.isEmpty != false)
     }
 
     @Test func codexSettingsProbeIsCancelledOnEarlyShutdownWithoutPersonalCLI() async throws {
@@ -381,6 +386,8 @@ extension NativeAppTests {
         await session.start()
         let store = try #require(session.store), settings = try #require(session.settings)
         let navigation = session.navigation, localization = session.localization
+        let appearance = session.appearance
+        let appAppearance = NSApplication.shared.appearance?.name
         let status = try #require(try await settings.snapshot().first { $0.configuration.account == CodexProviderSettingsService.account })
         let model = try #require(status.models.first?.id)
         await session.useModel(model)
@@ -408,23 +415,40 @@ extension NativeAppTests {
         editor.setMarkedText("にほん", selectedRange: NSRange(location: 1, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
         let text = editor.string, marked = editor.markedRange(), selection = editor.selectedRange(), draft = store.draft
         let messages = store.messages, viewport = navigation.viewport, request = navigation.scrollRequest
+        let undo = editor.undoManager, canUndo = editor.undoManager?.canUndo
+        let root = try #require(session.testDirectory), calls = try fixtureCalls(root).count
         for choice in [LanguageChoice.japanese, .english, .simplifiedChinese, .korean] {
             localization.choice = choice
-            try await appLocalizedSettle { editor.accessibilityLabel() == localization.string("Message", table: .chatUI) }
-            try await appLocalizedSettle { appAXLabels(host.host).contains(localization.diagnostic(failure.message)) }
-            #expect(session.store === store && session.navigation === navigation && session.localization === localization)
-            #expect(host.descendants(CompositionNSTextView.self).first === editor)
-            #expect(host.window.firstResponder === editor)
-            #expect(editor.string == text && editor.hasMarkedText() && editor.markedRange() == marked && editor.selectedRange() == selection)
-            #expect(store.draft == draft && store.messages == messages && store.visibleFailure == failure)
-            #expect(store.isSending && store.selectedConversationID == origin && store.modelSelection == model)
-            #expect(navigation.viewport == viewport && navigation.scrollRequest?.id == request?.id)
+            for theme in AppearanceChoice.allCases {
+                appearance.choice = theme
+                try await appLocalizedSettle {
+                    let expected = theme == .system ? NSApplication.shared.effectiveAppearance.name : appearance.resolve(systemColorScheme: .light).nsAppearance.name
+                    return host.window.effectiveAppearance.name == expected && editor.effectiveAppearance.name == expected
+                }
+                try await appLocalizedSettle { editor.accessibilityLabel() == localization.string("Message", table: .chatUI) }
+                try await appLocalizedSettle { appAXLabels(host.host).contains(localization.diagnostic(failure.message)) }
+                #expect(session.appearance === appearance && NSApplication.shared.appearance?.name == appAppearance)
+                #expect(editor.undoManager === undo && editor.undoManager?.canUndo == canUndo)
+                #expect(session.store === store && session.navigation === navigation && session.localization === localization)
+                #expect(host.descendants(CompositionNSTextView.self).first === editor)
+                #expect(host.window.firstResponder === editor)
+                #expect(editor.string == text && editor.hasMarkedText() && editor.markedRange() == marked && editor.selectedRange() == selection)
+                #expect(store.draft == draft && store.messages == messages && store.visibleFailure == failure)
+                #expect(store.isSending && store.selectedConversationID == origin && store.modelSelection == model)
+                #expect(navigation.viewport == viewport && navigation.scrollRequest?.id == request?.id)
+            }
         }
+        #expect(try fixtureCalls(root).count == calls) // Appearance/locale do not rediscover providers or restart generation.
         editor.insertText("日本", replacementRange: editor.markedRange())
         try await appLocalizedSettle { store.draft == editor.string && !editor.hasMarkedText() }
+        let cursor = ConversationID("cursor:conversation:simulated-history")
+        await store.selectConversation(cursor)
+        try await eventually { store.selectedConversationID == cursor && store.messages.count == 48 }
         await store.stop(conversationID: origin)
-        try await eventually { !store.isSending }
-        #expect(store.messages.last?.status == .stopped && !store.messages.last!.content.contains("LATE AFTER STOP"))
+        try await eventually { store.loadedConversations[origin]?.activity == .idle }
+        let stopped = try #require(store.loadedConversations[origin]?.messages.last)
+        #expect(stopped.status == .stopped && !stopped.content.contains("LATE AFTER STOP"))
+        #expect(store.selectedConversationID == cursor && store.modelSelection == nil)
         await session.shutdown()
     }
 
@@ -518,6 +542,120 @@ extension NativeAppTests {
 }
 
 @MainActor private final class AppLanguagePreferencesFixture { var values = ["ja-JP"] }
+
+extension NativeAppTests {
+    @Test func sessionAppearanceUsesInjectedDefaultsReopensRepairsAndCleansOwnedSuites() async throws {
+        let name = "DurableChat.AppearanceOwnership.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set("sentinel", forKey: "AppleInterfaceStyle")
+        defaults.set(["sentinel"], forKey: "AppleLanguages")
+        defaults.set("unchanged", forKey: "unrelated")
+        for invalid: Any in ["Dark", "ダーク", 42, ["dark"]] {
+            defaults.set(invalid, forKey: AppearanceSettings.defaultStorageKey)
+            // Production mode's injected domain is tested without starting a production runtime.
+            let session = AppSession(arguments: [], defaults: defaults,
+                localization: LocalizationSettings(defaults: defaults, preferredLanguages: { ["en"] }))
+            #expect(session.appearance.choice == .system)
+            #expect(defaults.object(forKey: AppearanceSettings.defaultStorageKey) == nil)
+            await session.shutdown()
+        }
+        let session = AppSession(arguments: ["--demo"], defaults: defaults)
+        session.localization.choice = .korean
+        for choice in AppearanceChoice.allCases {
+            session.appearance.choice = choice
+            let reopened = AppSession(arguments: ["--demo"], defaults: defaults)
+            #expect(reopened.appearance.choice == choice && reopened.localization.choice == .korean)
+            #expect(reopened.appearance !== session.appearance)
+            await reopened.shutdown()
+        }
+        session.appearance.choice = .dark
+        session.localization.resetToSystem()
+        #expect(session.appearance.choice == .dark)
+        session.localization.choice = .japanese
+        session.appearance.resetToSystem()
+        #expect(session.localization.choice == .japanese && session.appearance.preferredColorScheme == nil)
+        #expect(defaults.object(forKey: AppearanceSettings.defaultStorageKey) == nil)
+        #expect(defaults.string(forKey: "AppleInterfaceStyle") == "sentinel")
+        #expect(defaults.stringArray(forKey: "AppleLanguages") == ["sentinel"])
+        #expect(defaults.string(forKey: "unrelated") == "unchanged")
+        await session.shutdown()
+        #expect(defaults.string(forKey: "unrelated") == "unchanged") // Injected suite is caller-owned.
+
+        for arguments in [["--demo"], ["--test-runtime"]] {
+            let isolated = AppSession(arguments: arguments)
+            let suite = try #require(isolated.isolatedDefaultsName)
+            let probe = try #require(UserDefaults(suiteName: suite))
+            #expect(isolated.appearance.choice == .system && isolated.localization.choice == .system)
+            isolated.appearance.choice = .dark
+            isolated.localization.choice = .korean
+            #expect(probe.string(forKey: AppearanceSettings.defaultStorageKey) == "dark")
+            await isolated.shutdown()
+            #expect(probe.persistentDomain(forName: suite)?.isEmpty != false)
+        }
+    }
+
+    @Test func appAppearanceRootsCoverFourLocalesOppositeAmbientNativeWindowsAndPopover() async throws {
+        let session = AppSession(arguments: ["--demo"])
+        await session.start()
+        let appOverride = NSApplication.shared.appearance?.name
+        for language in [LanguageChoice.english, .japanese, .simplifiedChinese, .korean] {
+            session.localization.choice = language
+            for width: CGFloat in [400, 1200] {
+                for choice in AppearanceChoice.allCases {
+                    session.appearance.choice = choice
+                    let opposite = NSAppearance(named: choice == .dark ? .aqua : .darkAqua)!
+                    let workspace = HostedApp(NativeWorkspaceView(session: session), width: width, ambient: opposite)
+                    let settings = HostedApp(NativeSettingsView(session: session), width: width, ambient: opposite)
+                    let expected = choice == .system ? NSApplication.shared.effectiveAppearance.name
+                        : session.appearance.resolve(systemColorScheme: .light).nsAppearance.name
+                    try await appLocalizedSettle {
+                        workspace.window.effectiveAppearance.name == expected && settings.window.effectiveAppearance.name == expected &&
+                        appAXLabels(settings.host).contains(session.localization.string("Appearance", table: .appearance))
+                    }
+                    if choice == .system {
+                        #expect(workspace.window.appearance == nil && settings.window.appearance == nil)
+                    }
+                    let editor = try #require(workspace.descendants(CompositionNSTextView.self).first)
+                    #expect(editor.appearance == nil) // Actual production editor inherits; palette adoption belongs to #35.
+                    #expect(editor.effectiveAppearance.name == expected)
+                    #expect(workspace.host.effectiveAppearance.name == expected && settings.host.effectiveAppearance.name == expected)
+                    #expect(NSApplication.shared.appearance?.name == appOverride)
+                    try workspace.capture("issue33-workspace-\(language.rawValue)-\(Int(width))-\(choice.rawValue)")
+                    try settings.capture("issue33-settings-\(language.rawValue)-\(Int(width))-\(choice.rawValue)")
+                    settings.close(); workspace.close()
+                }
+            }
+        }
+        // An actual native presentation with the same app-owned root contract; no editor/window
+        // recreation as the shared owner changes. #38 must apply this seam at its new popovers.
+        let workspace = HostedApp(NativeWorkspaceView(session: session), width: 1200)
+        defer { workspace.close() }
+        let popover = NSPopover()
+        popover.behavior = .applicationDefined
+        let popoverHost = NSHostingView(rootView: NativeSettingsView(session: session))
+        let controller = NSViewController(); controller.view = popoverHost
+        popover.contentViewController = controller
+        popover.contentSize = NSSize(width: 400, height: 600)
+        popover.show(relativeTo: NSRect(x: 200, y: 200, width: 20, height: 20), of: workspace.host, preferredEdge: .maxX)
+        defer { popover.close() }
+        try await appLocalizedSettle { popover.isShown && popoverHost.window != nil }
+        for choice in [AppearanceChoice.dark, .light, .system] {
+            session.appearance.choice = choice
+            let expected = choice == .system ? NSApplication.shared.effectiveAppearance.name
+                : session.appearance.resolve(systemColorScheme: .light).nsAppearance.name
+            // AppKit inherits VibrantLight/VibrantDark in System popovers. Compare the
+            // canonical semantic match; raw appearance names differ legitimately from windows.
+            try await appLocalizedSettle {
+                popoverHost.layoutSubtreeIfNeeded(); popoverHost.displayIfNeeded()
+                return popoverHost.window?.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == expected &&
+                    popoverHost.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == expected
+            }
+            if choice == .system { #expect(popoverHost.window?.appearance == nil) }
+        }
+        await session.shutdown()
+    }
+}
 
 extension NativeAppTests {
     @Test func allAuthenticationStatesAndOpenSettingsFailureUseCurrentLanguage() async throws {

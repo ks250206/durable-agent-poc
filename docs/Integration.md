@@ -238,6 +238,64 @@ Refresh, close/reopen Settings, and switch away/back to its history to verify th
 Codex login/logout is instructions-only, and fixture mode rejects clearing/changing its executable to
 another CLI. Do not enter a real API key or attempt real account sign-in for this QA.
 
+## Issue #33 appearance composition and #38 handoff
+
+`AppSession.appearance` is the one `AppearanceSettings` owner. The session accepts injected
+`UserDefaults`; production explicitly selects `.standard`, while demo/test-runtime create one unique
+disposable preference suite shared by the independent appearance and language owners. Shutdown
+removes only a session-owned suite, including early shutdown/startup failure. A caller injecting a
+suite owns its cleanup and can reopen it to test persistence. No OS preference or app-global
+appearance is written. The appearance foundation's canonical storage, invalid-value repair and
+System key removal remain unchanged.
+
+Window and Settings scenes inject the same owner. `NativeWorkspaceView` and `NativeSettingsView`
+apply the app-target `View.appAppearance(session.appearance)` presentation-root seam, including
+opening/failure/demo states. It injects the reference, uses public `@ChatAppearance` /
+`ResolvedAppearance`, applies `preferredColorScheme` and updates the **existing owning NSWindow**
+through a non-interactive native anchor. Explicit choices assign Aqua/Dark Aqua; System assigns nil
+to release the window override and follow live AppKit inheritance. No window/store/editor/navigation
+identity is keyed by the choice and there is no lifecycle observer or cached System scheme.
+
+The Settings root reuses `AppearancePickerView(settings:localizer:)` with the current language
+owner's live localizer. Its six existing Appearance-table keys are reused without new labels or
+duplicate translations. Language reset and appearance reset operate independently.
+
+For #38: keep this session and both root modifiers when wiring tabs and the prompt rail. Apply
+`.appAppearance(session.appearance)` at every **new app-owned sheet/popover root**, using the same
+reference; a newly created native hosting controller is a presentation boundary too. Within ChatUI,
+use the public foundation `@ChatAppearance`, `ResolvedAppearance`, and `ChatTheme` contracts; do not
+import the executable target or create another preferences owner. Existing native descendants inherit
+their window appearance. Custom production editor text/background/insertion/selection palette and
+font adoption still belongs to #35. Window/native appearance inheritance does not certify that future
+custom palette work, final tab/rail integration, or physical IME/candidate-window interaction.
+
+API references: [SwiftUI presentation color preference](https://developer.apple.com/documentation/swiftui/view/preferredcolorscheme(_:))
+and [AppKit appearance inheritance](https://developer.apple.com/documentation/appkit/nsappearancecustomization/appearance).
+
+Local #33 verification (2026-11-10): **147 tests passed** (48 ChatUI, 14 ChatCore, 11
+AppLocalization, 19 app integration, 55 AgentRuntime) using the prescribed CLT/plugin command,
+bounded to 300 seconds; the final run completed in 87.9 seconds. The serialized native app suite
+checks four locales × 400/1200 pt × all three choices at both roots, overriding an initially opposite
+native window appearance. The actual production editor inherits the expected effective appearance;
+an actual NSPopover switches in place and releases its override on System. System popovers legitimately
+inherit VibrantLight/VibrantDark, so assertions compare their canonical Aqua/Dark Aqua best match.
+The existing foundation also exercises injected live System-scheme changes. The real local Codex
+fixture test changes language and appearance while streaming and retaining marked text, selection,
+first responder, draft, undo manager/availability, store/navigation/conversation/model and canonical
+failure; no extra CLI probes occur. Stop still targets the original turn after switching to Cursor.
+Persistence/reopen/invalid repair, independent resets, unrelated preference sentinels, normal shutdown,
+startup failure and quit-during-opening suite cleanup pass without personal preference domains.
+
+The unchanged release packaging script and deep/strict ad-hoc signature verification pass. Strict
+source and source/packaged resource audits pass for all five tables in all four locales, including
+the six Appearance keys with exact Foundation lookup. Logs and
+48 new app-owned native root PNGs are under ignored `dist/qa/issue-33/`; reference images are not
+stored or packaged. Evidence is synthetic native hosting and isolated executable fixtures. Physical
+IME/candidate windows, interactive packaged GUI and live OS-wide appearance-setting changes were not
+performed for #33. No real login/account/catalog/model/network request is certified. CI and the
+parent-owned Claude provider Opus 5.5 Medium review remain separate gates; no review/merge/watch is
+started by this implementation.
+
 ## Issue #23 language integration and historical verification
 
 AppSession now owns one injectable LocalizationSettings, shared by the scenes, workspace, settings
