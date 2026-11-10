@@ -1,10 +1,21 @@
-# AppLocalization — issue #20 handoff
+# Four-language localization
 
-`import AppLocalization` supplies the localization foundation for macOS 14+. This issue adds
-no current-screen translations or application hookup. #22 owns ChatUI translation; #23 owns
-settings/app wiring and Runtime/App translation after #21. Package.swift is wired here in wave 1:
-AppLocalization has no package-target dependencies; ChatUI, AgentRuntime and DurableChatApp depend
-on it; ChatCore remains independent. Existing package pins and the swiftbuild packaging script stay intact.
+The current application shares one observable language owner across workspace, settings and app-owned
+commands. All four tables live in one AppLocalization bundle: **Common 10, ChatUI 104, Runtime 108,
+App 13 keys per locale** (en, ja, zh-Hans, ko). #20 introduced the foundation, #22 translated ChatUI,
+and #23 connected Runtime/App presentation; #24 adds the repository-wide audit and CI/package gates.
+ChatCore stays independent of localization. The runtime protocols and credential boundary are unchanged.
+
+Run `scripts/validate-localization.sh` for the source inventory and tables, then
+`scripts/validate-localization.sh dist/DurableChat.app` for the actual copied/compiled resource bundle.
+The [auditor instructions](../scripts/localization/README.md) describe the fail-closed string-site inventory,
+reserved Common controls, explicit diagnostic mappings and mutation tests. It uses the existing public
+LocalizationValidation/LocalizationTemplate/Localizer contracts and an independently audited key manifest.
+It checks missing/extra/empty/malformed entries, placeholder mismatches and exact-locale Foundation lookup.
+Source coverage and format parity do not establish linguistic quality or replace native/GUI QA.
+The current evidence and unverified limits are in [Integration.md](Integration.md).
+
+## Foundation API (introduced in #20)
 
 ## Languages, settings, and observation
 
@@ -35,13 +46,13 @@ Generic `zh` means Simplified Chinese, recording the assumption from #18. Explic
 and region-only `zh-TW`/`zh-HK`/`zh-MO`, are unsupported and allow later preferences to win.
 They do not silently select Simplified Chinese. Explicit `zh-Hans` takes precedence over region.
 
-For #23: own **one** settings instance in `@State` / AppSession, inject the same reference into
-workspace and settings, and refresh System preferences on activation and/or
+The application owns **one** settings instance in `@State` / AppSession, injects the same reference into
+workspace and settings, and refreshes System preferences on activation and/or
 `NSLocale.currentLocaleDidChangeNotification` (hop to MainActor). This library deliberately does
 not install application lifecycle observers. The refresh method does not change an explicit choice.
 
 ```swift
-// Application integration example ONLY; not installed by #20.
+// Owning application boundary (installed by #23).
 @State private var localization = LocalizationSettings()
 
 // At the owning view/scene boundary:
@@ -151,7 +162,7 @@ failures, routing notices). `localization.diagnostic(source)` translates exact a
 source keys in the Runtime table. Unknown provider/system error strings remain byte-for-byte unchanged.
 This does not parse arbitrary prose or translate arbitrary provider text.
 
-For existing interpolated String diagnostics, #23 can register an explicit presentation adapter
+For existing interpolated String diagnostics, the runtime registers an explicit presentation adapter
 without changing ChatCore types or stored source text:
 
 ```swift
@@ -167,8 +178,7 @@ are verbatim `.string` arguments. All-capture, adjacent-capture, malformed, and 
 captures fail closed. Use only a small explicit allowlist of known app-owned diagnostic templates.
 Exact static diagnostics take precedence; otherwise templates are tried in caller order. For numeric
 formatting/cardinal selection, construct a typed `LocalizedMessage` while the count is available.
-Do not infer structured numbers/IDs from arbitrary provider output. #23 owns the actual diagnostic
-allowlist/translations; this issue ships none of its Runtime/App keys.
+Do not infer structured numbers/IDs from arbitrary provider output. RuntimePresentation owns the actual diagnostic allowlist/translations.
 
 ## Resource/table ownership and validation contract
 
@@ -182,9 +192,8 @@ by SwiftPM (`defaultLocalization: "en"`, `.process("Resources")`, `Bundle.module
 | `Runtime` (`.runtime`) | #23 | Create `Runtime.strings` in each locale; provider settings, app-owned errors/status/diagnostic templates |
 | `App` (`.app`) | #23 | Create `App.strings` in each locale; app scenes/menu/startup/isolated mode and language-setting placement |
 
-No empty/fake English-only ChatUI/Runtime/App files are prefilled. Follow-up owners edit only their
-tables; do not duplicate Common entries or create separate target bundles. Consumers can already
-import AppLocalization, so no subsequent Package.swift changes are needed for these resources.
+All four tables are present. Edit each table within its ownership boundary; do not duplicate Common
+entries or create separate target bundles. All consumers import AppLocalization.
 
 `LocalizationValidation.issues(tables: [LocalizationTable] = [.common], resources: Bundle =
 Localizer.resources) -> [LocalizationIssue]` reads the real `.strings` property lists (including
@@ -198,11 +207,10 @@ exposes the grammar check (`nil` = malformed).
 Each owner must add tests like `#expect(LocalizationValidation.issues(tables: [.chatUI]).isEmpty)`
 and compare `keys(table: .chatUI)` with its audited app-owned key set, including dynamic diagnostics,
 plural branches, accessibility labels/help and empty/loading/error states. This validator proves
-resource/format parity, not extraction completeness or linguistic quality. A UI-source inventory
-and locale-specific visual QA remain necessary in #22/#23. Named placeholders replace printf;
+resource/format parity, not extraction completeness or linguistic quality. The audited source inventory and locale-specific visual QA remain necessary alongside this library contract. Named placeholders replace printf;
 do not add `%lld`-style interpolation or `.stringsdict` entries without extending validation/runtime.
 
-## Verification
+## Foundation verification contract and historical #20 evidence
 
 Run with the pinned CLT toolchain:
 
@@ -228,17 +236,17 @@ The unchanged `scripts/build-app.sh` copies every swiftbuild `.bundle` into the 
 and English development localization, then run `codesign --verify --deep --strict` on the app.
 Swiftbuild uses `Contents/Resources` inside resource bundles; the legacy SwiftPM layout can be flat.
 Package inspection should accommodate both. The executable's explicit manifest dependency keeps the
-new resource bundle in the build graph even before #23 installs the app's language setting.
+resource bundle in the build graph.
 
-Verified locally on 2026-11-10 with CLT Swift 6.4.2 / macOS 27.2 SDK: all **98 tests passed**
+Historical #20 snapshot, not the current test total: verified on 2026-11-10 with CLT Swift 6.4.2 / macOS 27.2 SDK: all **98 tests passed**
 (baseline 88 unchanged + 10 AppLocalization tests). `scripts/build-app.sh` produced the release
 `dist/DurableChat.app`; deep/strict ad-hoc signature verification passed. An independent Foundation
 probe opened the copied `DurableChat_AppLocalization.bundle`, checked development localization `en`,
 read all 10 Common keys in every locale, and resolved Language as Language / 言語 / 语言 / 언어.
 Logs and the probe are under ignored `dist/qa/`. CLT emitted its existing missing Developer library/
 framework search-path linker warnings; there were no localization/compiler/test failures.
-Current app-screen localization, app lifecycle wiring, physical IME and provider-account validation
-remain outside #20. CI/review results must be read separately from the PR; local validation is not CI.
+App-screen localization and lifecycle wiring were subsequently delivered by #22/#23. Physical IME
+and real provider-account validation remain uncertified. CI/review results must be read separately from the PR; local validation is not CI.
 
 ## Primary API references
 
@@ -295,12 +303,12 @@ The existing API-key/Pi ChatGPT OAuth/Cursor/Codex CLI accounts and routes remai
 continues to instruct user-run `codex login` / `codex logout`, with unknown quota/entitlement and no
 app login/logout/key operation on that route.
 
-#24 owns repository-wide extraction/validation and CI/final aggregate QA. Consume these table and
+#24 supplies repository-wide inventory validation and CI/final aggregate QA. Consume these table and
 adapter ownership boundaries there; do not duplicate resource tables or move presentation into
 ChatCore. Physical IME/candidate-window behavior and real CLI account/model entitlement remain
 uncertified by the synthetic native hosts and isolated executable fixtures used here.
 
-Local #23 verification: all 136 tests passed, release packaging and deep/strict signature
+Historical #23 verification snapshot: all 136 tests passed, release packaging and deep/strict signature
 verification passed, and the independent packaged Foundation lookup resolved the complete
 Runtime/App tables in every locale. Native host PNGs include settings/provider/status/error
 screens at the required sizes and appearances. CUA confirmed language switching, shared

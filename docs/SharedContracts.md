@@ -1,3 +1,8 @@
+> Historical foundation/API handoff below. Current application composition, Codex route and
+> four-language behavior are documented in [Integration.md](Integration.md),
+> [CodexRuntime.md](CodexRuntime.md) and [Localization.md](Localization.md). Statements that a
+> feature was not yet implemented describe the original #3 boundary, not the final app.
+
 # Issue #3 shared API handoff
 
 These are public application contracts. `ChatCore` imports only Foundation and Observation;

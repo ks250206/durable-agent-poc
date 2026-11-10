@@ -3,7 +3,8 @@
 This standalone AgentRuntime adapter reuses **the existing official Codex CLI ChatGPT login**.
 It is a separate route from PiDurableKit ChatGPT OAuth. Application/router/settings-view composition is now connected by #21; see [Integration.md](Integration.md).
 The adapter remains independently usable through the handoff below.
-Package.swift and dependencies are unchanged.
+The runtime target and pinned dependencies remain unchanged. #24 adds a separate localization-audit
+executable and final integration checks; see [the current QA matrix](Integration.md).
 
 ## Public handoff for #21
 
@@ -151,6 +152,6 @@ CI harness note: native AppKit host suites share a serialized parent because foc
 is process-global. Their bounded waits service the event loop. Fixture RPC budgets are 5 seconds
 (production defaults remain 20); explicit hung-process/blocked-stdin/turn-deadline assertions remain.
 
-Local CLT verification: all **101 tests passed** (ChatUI 34, ChatCore 14, app integration 4,
+Historical #19 CLT verification snapshot (not the current aggregate total): all **101 tests passed** (ChatUI 34, ChatCore 14, app integration 4,
 runtime 48 including 12 Codex executable-fixture tests). Existing CLT linker search-path warnings
 are nonfatal. CI and independent Cursor Agent review are separate parent-owned gates.
