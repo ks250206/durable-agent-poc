@@ -6371,7 +6371,7 @@
       },
       {
         "prefix": "let name =",
-        "literal": "\"DurableChat.Isolated.Language.\\(UUID())\"",
+        "literal": "\"DurableChat.Isolated.Preferences.\\(UUID())\"",
         "count": 1,
         "kind": "allowlisted",
         "reason": "R8"
@@ -6447,7 +6447,7 @@
         "reason": "R8"
       },
       {
-        "prefix": "self.localization = LocalizationSettings(defaults: defaults, preferredLanguages: { [",
+        "prefix": "else { self.localization = LocalizationSettings(defaults: preferences, preferredLanguages: { [",
         "literal": "\"en\"",
         "count": 1,
         "kind": "allowlisted",
@@ -6689,6 +6689,13 @@
             "Ready. Only an explicit Send starts a model request."
           ]
         }
+      },
+      {
+        "prefix": ".accessibilityIdentifier(",
+        "literal": "\"settings.appearance\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R8"
       }
     ],
     "Sources/DurableChatApp/TestRuntimeFixture.swift": [
@@ -7659,7 +7666,8 @@
           ]
         }
       }
-    ]
+    ],
+    "Sources/DurableChatApp/NativeAppearanceRoot.swift": []
   },
   "reservedKeys": {
     "Common": {

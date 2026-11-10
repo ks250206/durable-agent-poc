@@ -1,5 +1,6 @@
 import AppKit
 import AppLocalization
+import ChatUI
 import SwiftUI
 
 private typealias StoredState<Value> = SwiftUI.State<Value>
@@ -19,10 +20,12 @@ struct DurableChatApp: App {
                     await session.start()
                 }
         }
+        .environment(session.appearance)
         .environment(session.localization)
         .environment(\.locale, session.localization.locale)
         .commands { LocalizedAppCommands(localization: session.localization) }
         Settings { NativeSettingsView(session: session) }
+            .environment(session.appearance)
             .environment(session.localization)
             .environment(\.locale, session.localization.locale)
     }

@@ -52,6 +52,7 @@ struct NativeWorkspaceView: View {
         }
         .frame(minWidth: 360, minHeight: 500)
         .background(.background)
+        .appAppearance(session.appearance)
         .environment(localization)
         .environment(\.locale, localization.locale)
         .environment(\.chatDiagnosticTemplates, RuntimePresentation.diagnosticTemplates)
@@ -70,6 +71,9 @@ struct NativeSettingsView: View {
                 Button(localization.string("Reset to System")) { localization.resetToSystem() }
                     .accessibilityIdentifier("settings.reset-language")
             }.padding()
+            AppearancePickerView(settings: session.appearance, localizer: localization.localizer)
+                .accessibilityIdentifier("settings.appearance")
+                .padding()
             Divider()
             if let service = session.settings {
                 ProviderSettingsView(service: service, initialAccount: session.store?.modelSelection?.account) { selection in
@@ -82,8 +86,10 @@ struct NativeSettingsView: View {
                     .padding(24).frame(maxWidth: .infinity)
             }
         }
-        .frame(minWidth: 360, idealWidth: 600, minHeight: 420)
+        .frame(minWidth: 360, idealWidth: 600, maxWidth: .infinity,
+               minHeight: 420, maxHeight: .infinity, alignment: .top)
         .background(.background)
+        .appAppearance(session.appearance)
         .environment(localization)
         .environment(\.locale, localization.locale)
     }
