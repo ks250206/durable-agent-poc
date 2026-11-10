@@ -1,11 +1,12 @@
 import Foundation
 
-/// All four tables live in AppLocalization's resource bundle. Owners add only their own tables.
+/// All declared tables live in AppLocalization's resource bundle. Owners add only their own tables.
 public enum LocalizationTable: String, CaseIterable, Sendable {
     case common = "Common"
     case chatUI = "ChatUI"
     case runtime = "Runtime"
     case app = "App"
+    case appearance = "Appearance"
 }
 
 /// Named interpolation avoids printf type mismatches and allows translation reordering.
