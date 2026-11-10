@@ -146,7 +146,7 @@ extension NativeUITests {
                     if width == 1200 {
                         try await localizedSettle { descendants(hosted.host, of: MinimapInputView.self).count == 1 }
                         let map = try #require(descendants(hosted.host, of: MinimapInputView.self).first)
-                        #expect(map.accessibilityLabel() == localizer.chat("Conversation map"))
+                        #expect(map.accessibilityLabel() == localizer.chat("Full-history role overview"))
                         #expect(labels(hosted.host).contains(localizer.chat("Search conversations")))
                     }
                     #expect(hosted.host.frame.width == width)
@@ -237,7 +237,7 @@ extension NativeUITests {
         for choice in [LanguageChoice.japanese, .simplifiedChinese, .korean, .english] {
             settings.choice = choice
             let localizer = settings.localizer
-            try await localizedSettle { editor.accessibilityLabel() == localizer.chat("Message") && map.accessibilityLabel() == localizer.chat("Conversation map") }
+            try await localizedSettle { editor.accessibilityLabel() == localizer.chat("Message") && map.accessibilityLabel() == localizer.chat("Full-history role overview") }
             #expect(descendants(hosted.host, of: CompositionNSTextView.self).first === editor)
             #expect(descendants(hosted.host, of: MinimapInputView.self).first === map)
             #expect(editor.hasMarkedText())
@@ -257,7 +257,7 @@ extension NativeUITests {
         #expect(!editor.hasMarkedText())
     }
 
-    @Test func minimapNativeKeyLoopAndOpenMessageSheetSwitchInPlaceWithNumberEntry() async throws {
+    @Test func trajectoryNativeKeyLoopAndInlineNumberEntrySwitchInPlace() async throws {
         let (settings, defaults, suite) = try sharedSettings()
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = ChatStore(backend: LocalizationBackend())
@@ -274,37 +274,30 @@ extension NativeUITests {
         let target = navigation.scrollRequest?.messageID
         for choice in [LanguageChoice.japanese, .simplifiedChinese, .korean, .english] {
             settings.choice = choice
-            try await localizedSettle { map.accessibilityLabel() == settings.localizer.chat("Conversation map") }
+            try await localizedSettle { map.accessibilityLabel() == settings.localizer.chat("Full-history role overview") }
             #expect(descendants(hosted.host, of: MinimapInputView.self).first === map)
             #expect(hosted.window.firstResponder === map)
             #expect(navigation.scrollRequest?.messageID == target)
             #expect((map.accessibilityValue() as? String)?.contains(settings.localizer.role(.assistant)) == true)
         }
-        #expect(map.accessibilityPerformShowMenu())
-        try await localizedSettle { !hosted.window.sheets.isEmpty }
-        let sheet = try #require(hosted.window.sheets.first)
-        let content = try #require(sheet.contentView)
-        try await localizedSettle { descendants(content, of: NSTextField.self).contains { $0.isEditable } }
-        let field = try #require(descendants(content, of: NSTextField.self).first { $0.isEditable })
-        #expect(sheet.makeFirstResponder(field))
+        let trajectory = try #require(descendants(hosted.host, of: TrajectoryView.self).first)
+        let field = trajectory.numberField
+        #expect(hosted.window.makeFirstResponder(field))
         field.selectText(nil)
         let editor = try #require(field.currentEditor() as? NSTextView)
         editor.insertText("2", replacementRange: editor.selectedRange())
         editor.setSelectedRange(NSRange(location: 1, length: 0))
         for choice in [LanguageChoice.japanese, .simplifiedChinese, .korean, .english] {
             settings.choice = choice
-            try await localizedSettle { labels(content).contains(settings.localizer.chat("Message number")) }
+            try await localizedSettle { field.accessibilityLabel() == settings.localizer.chat("Message number") }
             #expect(field.currentEditor() === editor)
             #expect(editor.string == "2")
             #expect(editor.selectedRange() == NSRange(location: 1, length: 0))
-            #expect(sheet.firstResponder === editor)
-            #expect(labels(content).contains(settings.localizer.chat("Go")))
+            #expect(hosted.window.firstResponder === editor)
+            #expect(trajectory.goButton.title == settings.localizer.chat("Go"))
         }
-        let enter = try #require(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
-            windowNumber: sheet.windowNumber, context: nil, characters: "\r", charactersIgnoringModifiers: "\r", isARepeat: false, keyCode: 36))
-        sheet.sendEvent(enter)
-        try await localizedSettle { hosted.window.sheets.isEmpty }
-        #expect(navigation.scrollRequest?.messageID == store.messages[1].id)
+        trajectory.goButton.performClick(nil)
+        try await localizedSettle { navigation.scrollRequest?.messageID == store.messages[1].id }
         #expect(hosted.window.makeFirstResponder(map))
         // A language change did not replace the native key-view-loop participant.
         let next = NSTextField(frame: .zero)

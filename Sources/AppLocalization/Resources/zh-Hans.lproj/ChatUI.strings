@@ -110,3 +110,26 @@
 "Each bar is a user input. The bright bar follows the transcript center. Hover previews the original input. Click, Up/Down, Home/End or Return jumps to an input. Tab leaves navigation." = "每条横线代表一次用户输入。亮线跟随对话视口中心。悬停可预览原始输入。点击、上下箭头、Home/End 或 Return 可跳转到输入。Tab 可离开导航。";
 "Showing inputs {first}–{last} of {total}. Scroll here or use Page Up/Down to browse every input." = "正在显示全部 {total} 次输入中的第 {first}–{last} 次。在此滚动或使用 Page Up/Down 可浏览所有输入。";
 "{count} user inputs. Transcript center unavailable." = "{count} 次用户输入。对话视口中心不可用。";
+
+/* Issue #37 trajectory and #38 tab labels. */
+"Chat" = "聊天";
+"Trajectory" = "轨迹";
+"Search message text" = "搜索消息正文";
+"Search the entire original text. Previews are shortened; select a row to read and copy the full message." = "搜索完整原文。预览已缩短；选择一行即可阅读并复制完整消息。";
+"All roles" = "所有角色";
+"Filter by role" = "按角色筛选";
+"Chronological message log" = "按时间顺序排列的消息日志";
+"Select a row to read the original. Return jumps to its chat message. Command-C copies the whole message." = "选择一行阅读原文。按 Return 跳转到聊天中的对应消息，Command-C 复制整条消息。";
+"Original message, plain text" = "原始消息（纯文本）";
+"Jump to message" = "跳转到消息";
+"Copy the entire original message verbatim" = "原样复制整条原始消息";
+"{shown} of {total} messages" = "{total} 条消息中的 {shown} 条";
+"No messages for this role" = "此角色没有消息";
+"No matching messages" = "没有匹配的消息";
+"Select a message to inspect its original text" = "选择消息以查看原文";
+"Input / User" = "输入 / 用户";
+"Assistant / Model" = "助手 / 模型";
+"Tool / System" = "工具 / 系统";
+"Earlier → Later · text-weighted order" = "较早 → 较晚 · 按文本量加权的顺序";
+"Full-history role overview" = "完整历史角色概览";
+"Left/Right or Up/Down navigate every message. Home/End reach the ends. Return repeats a jump. The solid outline is the actual chat viewport; the dashed line is your target. Tab leaves the overview." = "使用左右或上下键浏览每条消息，Home/End 到达首尾，Return 再次跳转。实线框表示聊天的实际可见范围，虚线表示操作目标。Tab 离开概览。";

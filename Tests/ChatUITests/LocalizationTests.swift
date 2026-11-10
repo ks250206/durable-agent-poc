@@ -8,6 +8,28 @@ import Testing
 // message roles/status/Markdown/copy, and every minimap/help/AX/count branch.
 // Product/provider names, saved titles, IDs, paths and transcript content stay verbatim.
 private let chatUIKeys: Set<String> = [
+    "Chat",
+    "Trajectory",
+    "Search message text",
+    "Search the entire original text. Previews are shortened; select a row to read and copy the full message.",
+    "All roles",
+    "Filter by role",
+    "Chronological message log",
+    "Select a row to read the original. Return jumps to its chat message. Command-C copies the whole message.",
+    "Original message, plain text",
+    "Jump to message",
+    "Copy the entire original message verbatim",
+    "{shown} of {total} messages",
+    "No messages for this role",
+    "No matching messages",
+    "Select a message to inspect its original text",
+    "Input / User",
+    "Assistant / Model",
+    "Tool / System",
+    "Earlier → Later · text-weighted order",
+    "Full-history role overview",
+    "Left/Right or Up/Down navigate every message. Home/End reach the ends. Return repeats a jump. The solid outline is the actual chat viewport; the dashed line is your target. Tab leaves the overview.",
+
     "User input navigation",
     "User input {current} of {total}",
     "Each bar is a user input. The bright bar follows the transcript center. Hover previews the original input. Click, Up/Down, Home/End or Return jumps to an input. Tab leaves navigation.",

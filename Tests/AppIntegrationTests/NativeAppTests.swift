@@ -592,7 +592,7 @@ extension NativeAppTests {
                 defer { host.close() }
                 try await appLocalizedSettle { host.descendants(MinimapInputView.self).count == 1 }
                 let map = try #require(host.descendants(MinimapInputView.self).first)
-                #expect(map.accessibilityLabel() == localization.string("Conversation map", table: .chatUI))
+                #expect(map.accessibilityLabel() == localization.string("Full-history role overview", table: .chatUI))
                 try await appLocalizedSettle { session.navigation.viewport.lastVisibleMessageID == store.messages.last?.id }
                 #expect(host.window.makeFirstResponder(map))
                 map.keyDown(with: try #require(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
@@ -602,9 +602,9 @@ extension NativeAppTests {
                 try await appLocalizedSettle { session.navigation.viewport.firstVisibleMessageID == target }
                 let request = session.navigation.scrollRequest?.id
                 localization.choice = choice == .english ? .japanese : .english
-                try await appLocalizedSettle { map.accessibilityLabel() == localization.string("Conversation map", table: .chatUI) }
+                try await appLocalizedSettle { map.accessibilityLabel() == localization.string("Full-history role overview", table: .chatUI) }
                 localization.choice = choice
-                try await appLocalizedSettle { map.accessibilityLabel() == localization.string("Conversation map", table: .chatUI) }
+                try await appLocalizedSettle { map.accessibilityLabel() == localization.string("Full-history role overview", table: .chatUI) }
                 #expect(host.descendants(MinimapInputView.self).first === map && host.window.firstResponder === map)
                 #expect(session.navigation.scrollRequest?.id == request && store.selectedConversationID == cursor)
                 #expect(try fixtureCalls(root).count == callsBefore) // Presentation never re-probes or starts a turn.
