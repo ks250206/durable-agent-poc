@@ -110,8 +110,21 @@ private actor TrajectoryBackend: ChatBackend {
 }
 @MainActor private func trajectoryClick(_ view: NSView, _ point: CGPoint) throws {
     let window = try #require(view.window)
+    let visible = try #require(window.screen).visibleFrame
+    let placement = CGRect(x: visible.minX, y: visible.minY,
+                           width: min(1024, visible.width), height: min(674, visible.height))
+    let original = window.convertPoint(toScreen: view.convert(point, to: nil))
+    var origin = window.frame.origin
+    if original.x < placement.minX { origin.x += placement.minX - original.x + 8 }
+    if original.x >= placement.maxX { origin.x -= original.x - placement.maxX + 8 }
+    if original.y < placement.minY { origin.y += placement.minY - original.y + 8 }
+    if original.y >= placement.maxY { origin.y -= original.y - placement.maxY + 8 }
+    // The 760pt component host exceeds CI's desktop. Translate this test-only
+    // window before each native interaction; never exempt an off-screen target.
+    if origin != window.frame.origin { window.setFrameOrigin(origin) }
+    window.contentView?.layoutSubtreeIfNeeded()
     let screenPoint = window.convertPoint(toScreen: view.convert(point, to: nil))
-    #expect(try #require(window.screen).visibleFrame.contains(screenPoint))
+    try #require(visible.contains(screenPoint) && placement.contains(screenPoint))
     let event = try #require(NSEvent.mouseEvent(with: .leftMouseDown, location: view.convert(point, to: nil), modifierFlags: [],
         timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1))
     window.sendEvent(event)
@@ -351,7 +364,7 @@ extension NativeUITests {
                 for width in [CGFloat(400), 1200] {
                     let view = TrajectoryView(frame: CGRect(x: 0, y: 0, width: width, height: 760))
                     let visible = try #require(NSScreen.main).visibleFrame
-                    let placement = CGRect(x: visible.minX, y: visible.minY, width: min(1024, visible.width), height: visible.height)
+                    let placement = CGRect(x: visible.minX, y: visible.minY, width: min(1024, visible.width), height: min(674, visible.height))
                     let window = try trajectoryWindow(view, width: width, placementFrame: placement)
                     defer { window.close() }
                     let navigation = TranscriptNavigation()
