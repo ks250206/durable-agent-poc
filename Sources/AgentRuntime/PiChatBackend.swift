@@ -176,6 +176,7 @@ public actor PiChatBackend: ChatBackend {
             guard let status = statuses.first(where: { $0.configuration.account == request.model.account }),
                   status.authentication == .configured else { throw ChatBackendError.disconnected }
             guard status.models.contains(where: { $0.id == request.model }) else { throw ChatBackendError.noModel }
+            try Task.checkCancellation()
             let view = try await conversation.view()
             guard !view.isBusy, view.inbox.isEmpty else { throw ChatBackendError.busy }
             try await conversation.configure(AgentChange(
@@ -197,6 +198,7 @@ public actor PiChatBackend: ChatBackend {
                 "clientMessageID": .string(accepted.id.rawValue),
                 "createdAt": .number(accepted.createdAt.timeIntervalSince1970),
             ])
+            try Task.checkCancellation()
             _ = try await conversation.submit(request.text, whenBusy: .reject,
                                               requestId: request.messageID.rawValue, entry: entry)
             // Publish acceptance synchronously from the durable submission; observation can lag.

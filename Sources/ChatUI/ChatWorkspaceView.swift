@@ -129,7 +129,7 @@ public struct ChatWorkspaceView<Composer: View, Minimap: View>: View {
                         stopPendingFor = id
                         Task { @MainActor in
                             defer { if stopPendingFor == id { stopPendingFor = nil } }
-                            await store.stop()
+                            await store.stop(conversationID: id)
                         }
                     } label: { Label("Stop", systemImage: "stop.fill") }
                     .disabled(stopPending || store.selectedConversation?.activity == .stopping)

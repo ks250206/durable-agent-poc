@@ -1,38 +1,39 @@
-import AgentRuntime
-import ChatCore
-import ChatUI
+import AppKit
 import SwiftUI
 
-// Explicit alias selects the macOS 14-compatible State property wrapper, including on SDKs
-// that also declare a State macro whose plugin is not shipped in Command Line Tools.
 private typealias StoredState<Value> = SwiftUI.State<Value>
 
 @main
 @MainActor
 struct DurableChatApp: App {
-    @StoredState<ChatStore> private var store: ChatStore
-    @StoredState<TranscriptNavigation> private var navigation = TranscriptNavigation()
-
-    init() {
-        let mode = ShellLaunchMode(arguments: ProcessInfo.processInfo.arguments)
-        _store = State(initialValue: ChatStore(backend: ShellChatBackend(mode: mode)))
-    }
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
+    @StoredState private var session = AppSession()
 
     var body: some Scene {
         Window("DurableChat", id: "main") {
-            ChatShellView(store: store, navigation: navigation)
-                .task { await store.start() }
+            NativeWorkspaceView(session: session)
+                .frame(idealWidth: 1180, idealHeight: 800)
+                .task {
+                    delegate.session = session
+                    await session.start()
+                }
         }
-        // #7 supplies ProviderSettingsView; #9 injects its ProviderSettingsService here.
-        Settings {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Providers").font(.headline)
-                ForEach(ProviderOption.allCases) { option in Text(option.displayName) }
-                Text("Provider configuration will be connected by the runtime integration.")
-                    .foregroundStyle(.secondary)
-            }
-            .padding(24)
-            .frame(width: 400)
-        }
+        Settings { NativeSettingsView(session: session) }
     }
+}
+
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    var session: AppSession?
+    private var terminating = false
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard !terminating else { return .terminateLater }
+        terminating = true
+        Task { @MainActor in
+            await session?.shutdown()
+            sender.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
+    }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 }

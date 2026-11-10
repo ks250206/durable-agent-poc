@@ -136,7 +136,14 @@ public struct ConversationSidebar: View {
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "bubble.left").accessibilityHidden(true)
-                Text(ConversationFilter.title(summary)).lineLimit(2).multilineTextAlignment(.leading)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(ConversationFilter.title(summary)).lineLimit(2).multilineTextAlignment(.leading)
+                    if summary.id.rawValue.hasPrefix("pi:conversation:") {
+                        Text("Pi").font(.caption).foregroundStyle(.secondary)
+                    } else if summary.id.rawValue.hasPrefix("cursor:conversation:") {
+                        Text("Cursor").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
                 Spacer(minLength: 0)
                 if store.loadedConversations[summary.id]?.activity.isBusy == true {
                     Image(systemName: "ellipsis").accessibilityLabel("Response in progress")
