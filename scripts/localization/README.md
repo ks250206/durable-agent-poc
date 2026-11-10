@@ -4,12 +4,13 @@ Run `scripts/validate-localization.sh`, then `scripts/build-app.sh`, then
 `scripts/validate-localization.sh dist/DurableChat.app`. Uses the selected Swift toolchain and
 Python 3 standard library only. Neither command launches the app or accesses accounts.
 
-`inventory.json` extends the audited #20/#22/#23 inventories with #36's five ChatUI rail keys:
-Common 10, ChatUI 109, Runtime 108,
-App 13 keys. Its source section accounts for **every Swift string site in Sources**, including
+`inventory.json` extends the audited #20/#22/#23 inventories with #32 appearance resources and #36 rail keys:
+Common 10, ChatUI 109, Runtime 108, App 13, Appearance 6 keys. Its source section accounts for **every Swift string site in Sources**, including
 nested interpolation, raw/multiline strings, dynamic branches, AX help, canonical diagnostics,
 wire/ID/symbol/path data and fixture/verbatim transcript exceptions. Site prefixes and occurrence
-counts fail closed on new strings, changed sinks, removals or files. Three reusable Common controls
+counts fail closed on new strings, removals or files, and on sink changes visible on the literal's own line.
+A literal that starts its own line has no call-site prefix: moving that existing literal into a
+line-broken presentation call may not be detected. This line-local check is not AST/data-flow analysis. Three reusable Common controls
 (Cancel, Close, Save) are explicitly reserved, not falsely claimed as displayed. The two anchored
 Runtime diagnostic templates and the fixed login-instructions composition have explicit mappings.
 The current manifest is a reviewed boundary, not a general Swift semantic/data-flow analyzer.

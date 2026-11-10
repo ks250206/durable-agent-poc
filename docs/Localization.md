@@ -323,3 +323,29 @@ screens at the required sizes and appearances. CUA confirmed language switching,
 workspace propagation, Settings reopen and System reset; its popup safety guard prevented
 certifying the attempted streaming-language/model-selection GUI path. See Integration.md
 for the exact evidence and limits; synthetic composition is not physical IME certification.
+
+## Issue #32 appearance ownership
+
+`LocalizationTable.appearance` adds **Appearance.strings**, six keys in en/ja/zh-Hans/ko:
+Appearance, System, Light, Dark, Use the system appearance, or always use Light or Dark., Reset to System.
+These belong to the standalone `ChatUI.AppearancePickerView` and `AppearanceChoice.nameKey`;
+Common/ChatUI/App/Runtime are unchanged. The appearance model stores canonical identifiers, never labels.
+`AppearancePickerView(settings:localizer:)` receives the current language owner's localizer in body.
+No scene or application localization owner is replaced; #33 owns placement.
+
+Extend the strict source/resource inventory with this table, the enum raw value, each new Swift file
+(including files with zero literals), dynamic choice-key coverage, picker labels/help, and the stable
+appearance storage identifiers. No fallback is accepted as coverage. AppearanceTests also assert exact
+six-key parity, `.localized` provenance and translated values in every locale. The aggregate source and
+packaged resource audit remains mandatory; this table must not be exempted or treated as a reserved
+future table. The full public API and native color/identity integration recipe are in SharedContracts.md.
+
+Local #32 verification on 2026-11-10, after integrating main `dbc753e`: **145 Swift tests passed**
+(139 baseline + 6 appearance), using the prescribed CLT/plugin command with a 300-second overall
+limit (completed in about 82 seconds including build). Source and packaged-resource audits passed
+for all five tables in all four languages, including all six Appearance keys with exact Foundation
+lookup and `.localized` provenance. The unchanged release packaging script and
+`codesign --verify --deep --strict` passed. Native artifacts are synthetic rendered hosts, stored only
+under ignored `dist/qa/`; no user reference image is a resource or artifact. Production appearance
+scene/editor adoption remains #33/#35; physical IME and OS accessibility setting changes are not
+certified by these injected/synthetic tests. CI and independent review remain separate PR gates.

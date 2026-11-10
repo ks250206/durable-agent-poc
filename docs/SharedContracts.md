@@ -279,3 +279,134 @@ backend mutation or transcript transform. ChatUI's optional `EnvironmentValues.c
 adapter is needed for open interpolated failures; ChatUI does not import AgentRuntime and ChatCore
 still does not import AppLocalization. #24 should audit this seam and inventories without absorbing
 provider behavior, changing account/model routing, or replacing persisted source diagnostics.
+
+## Issue #32 appearance and design handoff (`import ChatUI`)
+
+This is the shared foundation for #33–#37. AppSession, scenes, workspace, transcript, composer,
+sidebar and navigation are **not wired here**. Existing ChatTheme and ConnectionPresentation
+consumers remain source-compatible. ChatCore has no SwiftUI/AppKit/AppLocalization dependency;
+no package dependency or provider behavior changes.
+
+### Ownership and persistence (#33)
+
+`AppearanceChoice: String, CaseIterable, Identifiable, Sendable` is ordered `.system`, `.light`,
+`.dark` with canonical stored identifiers `system`, `light`, `dark`. Public `init(persistedValue:)`
+accepts only exact identifiers; missing, invalid, translated, wrong-case and non-string defaults
+fall back to System. `nameKey` is a key in **Appearance**, not Common or ChatUI.
+`preferredColorScheme: ColorScheme?` returns nil/light/dark.
+
+`@MainActor @Observable public final class AppearanceSettings` has:
+
+```swift
+init(defaults: UserDefaults, storageKey: String = AppearanceSettings.defaultStorageKey)
+var choice: AppearanceChoice { get set }
+var preferredColorScheme: ColorScheme? { get }
+func resetToSystem()
+func resolve(systemColorScheme: ColorScheme, contrast: ColorSchemeContrast = .standard,
+             reduceMotion: Bool = false) -> ResolvedAppearance
+```
+
+`defaults` is **required**; the library never selects `.standard`. Production #33 can explicitly
+pass its defaults; demo/test modes must pass disposable suites, as language already does.
+`defaultStorageKey` is `DurableChat.appearanceOverride`. Only explicit light/dark is persisted.
+System/reset removes that key; initialization repairs invalid storage. No language, OS preference,
+credential, model or account value is read or changed. Reopen recreates the owner with the same suite.
+Observation invalidates choice-derived body reads synchronously, without a task or reinitialization.
+
+Own one instance, pass the same reference into every Window/Settings/popover presentation and
+apply the preference at **each presentation root** (SwiftUI uses the nearest enclosing presentation):
+
+```swift
+// Example for #33 only; no app scene is modified in #32.
+ContentView()
+    .environment(appearanceSettings)
+    .preferredColorScheme(appearanceSettings.preferredColorScheme)
+// In a consuming SwiftUI view:
+@ChatAppearance private var appearance
+// Inside body: appearance.palette.mainCanvas.color; appearance.feedbackAnimation
+// Existing localization owner remains independent:
+AppearancePickerView(settings: appearanceSettings, localizer: localization.localizer)
+```
+
+`AppearancePickerView` has public `init(settings: AppearanceSettings, localizer: Localizer)`.
+It supplies a localized System/Light/Dark picker, explanatory help, and Reset to System. It does not
+own windows/defaults, cache language globally, or install lifecycle observers. Pass the live localizer
+from body. `LocalizationTable.appearance` declares its six keys in en/ja/zh-Hans/ko. #33 should reuse
+these resources, not add a duplicate set to App/Common. See Localization.md for inventory ownership.
+
+### Resolution and native controls (#34/#35/#36/#37)
+
+`@ChatAppearance: DynamicProperty` is public, with `init()` and `wrappedValue: ResolvedAppearance`.
+It reads optional typed `AppearanceSettings` injection, SwiftUI `colorScheme`, `colorSchemeContrast`,
+and `accessibilityReduceMotion`. Without an owner it uses the environment and never loads defaults.
+Explicit Light/Dark wins over the environment's scheme; System resolves on **every environment update**.
+Use nil `preferredColorScheme` to release the override. Do not cache a launch-time NSApp appearance,
+observe/mutate AppleInterfaceStyle, set NSApp.appearance, or freeze a System scheme in defaults.
+
+`ResolvedAppearance: Equatable, Sendable` exposes public immutable `colorScheme`, `contrast`,
+`reduceMotion`, and `init(colorScheme:contrast:reduceMotion:)` (standard/false defaults). Derived fields:
+
+- `palette: ChatPalette`; `strokeWidth` 1/1.5 pt and `focusWidth` 2/3 pt for standard/increased contrast.
+- `feedbackAnimation: Animation?`: 140 ms ease-out or nil with Reduce Motion. Consumers must also
+  avoid spatial/scroll animation when reduced; nil is not permission to start an implicit animation.
+- `@MainActor nsAppearance: NSAppearance`: assignable Aqua/Dark Aqua, even if macOS currently uses
+  the opposite scheme. AppKit applies the OS Increase Contrast preference to native controls.
+  Accessibility high-contrast names are **matching-only**, not assignable overrides. Custom chrome
+  always uses the snapshot's explicit contrast palette, including in deterministic tests.
+- `@MainActor resolveAppKitColor(_ color: NSColor) -> NSColor?`: resolves system/selection colors
+  inside that concrete drawing appearance into sRGB; callers handle an unconvertible color.
+
+For an NSViewRepresentable, read `@ChatAppearance` during update and set **the existing** native
+view's `appearance = appearance.nsAppearance`. Use `appearance.palette.<role>.nsColor` for text,
+background, insertion point and custom chrome; use `resolveAppKitColor` for system selection colors.
+Assigning a plain ambient fixed NSColor once in makeNSView is insufficient under forced Light/Dark.
+Do not replace the native editor, coordinator, binding or attributed text on a presentation change.
+Update presentation properties in place; retain marked text, selection, first responder, undo, draft,
+ChatStore, navigation, subscription and generation. Never add `.id(choice)` or conditional root types.
+Production composer adoption and real physical IME QA belong to #35/#38, not this foundation.
+
+### Token names and compatibility
+
+`ThemeColor: Equatable, Sendable` exposes immutable `red/green/blue/opacity: Double`,
+`init(hex: UInt32, opacity: Double = 1)` and concrete `color: Color` / `nsColor: NSColor`.
+`ChatPalette: Equatable, Sendable` has `init(colorScheme: ColorScheme,
+contrast: ColorSchemeContrast = .standard)` and immutable ThemeColor fields:
+
+- surfaces `mainCanvas`, `sidebar`, `raised` (popover/tooltip), `composer`, `code`, `userBubble`;
+- interaction `active` (selected navigation), `hover`, `stroke`, `focus`;
+- text `primaryText`, `secondaryText`, `mutedText`, `textOnAccent`;
+- status `accent`, `success`, `warning`, `error`, and `shadow`.
+
+Dark uses restrained charcoal (#151515 canvas, #242426 sidebar, #2e2e30 composer), fine borders,
+and a muted blue accent. Light uses warm neutral distinct surfaces. Normal readable text/status roles
+are tested at >=4.5:1 on every content/interaction surface; focus >=3:1. Increased Contrast strengthens
+text, focus and borders (stroke >=3:1) and removes shadows; selection/focus must remain distinguished
+by shape/border as well as color. A fine standard decorative separator is not a sufficient focus ring.
+Do not use status color alone to communicate a status.
+
+`public enum ChatTheme` provides `palette(colorScheme:contrast:)`. Existing static `background`,
+`sidebar`, `inset`, `separator`, `transcriptWidth` remain available; the four colors dynamically resolve
+against their supplied AppKit drawing appearance. New consumers should use the explicit resolved palette.
+`WorkspaceLayout` thresholds and `ConnectionPresentation` title/symbol/detail/localization are unchanged.
+Public nested token namespaces:
+
+- `Spacing`: `xSmall=4`, `small=8`, `medium=12`, `large=16`, `xLarge=24`, `section=32` (CGFloat).
+- `Radii`: `control=6`, `code=8`, `message=16`, `composer=20` (CGFloat).
+- `Dimensions`: `readableWidth=760`, `sidebarWidth=248`, `headerHeight=52`, `controlHeight=32`,
+  `composerMinHeight=80`, `composerMaxHeight=180`, `promptRailWidth=28`, `popoverWidth=320` (CGFloat).
+  Readable width is a maximum; owners adapt padding and auxiliary panes to available width.
+- `Shadows`: `composerRadius=16`, `composerY=4`, `popoverRadius=12`, `popoverY=3` (CGFloat),
+  paired with the resolved `palette.shadow`, whose opacity is zero in Increased Contrast.
+- `Typography`: system `title` 22 semibold, `heading` 17 semibold, `body` 15,
+  `secondary` 13, `caption` 11, `code` 13 monospaced (Font); main-actor `editor` (NSFont 15)
+  and `nativeCode` (NSFont 13 monospaced). Use system fallback fonts for multilingual glyphs.
+
+Apple documents [preferredColorScheme presentation scope](https://developer.apple.com/documentation/swiftui/view/preferredcolorscheme(_:))
+and the [matching-only high-contrast appearance contract](https://developer.apple.com/documentation/appkit/nsappearance/name-swift.struct/accessibilityhighcontrastaqua).
+
+Native tests join the existing serialized `NativeUITests`. They exercise concrete AppKit resolution,
+compatibility colors, live override/System changes, and injected accessibility resolution. The
+**existing** CompositionTextView retains marked text, selection, focus and draft in one host. A test-only native swatch consumes the
+resolved appearance; it does not claim the future production editor/window wiring is implemented.
+Any saved PNG is rendered from this synthetic host. User reference images are never copied or used
+as test fixtures/artifacts. Tests use fresh disposable defaults and no provider/network/account calls.

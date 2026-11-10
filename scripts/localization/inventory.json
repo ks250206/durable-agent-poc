@@ -248,6 +248,14 @@
       "Settings…",
       "Some active work could not be saved while closing the runtime.",
       "The model could not be applied. Refresh Settings and choose an available model."
+    ],
+    "Appearance": [
+      "Appearance",
+      "Dark",
+      "Light",
+      "Reset to System",
+      "System",
+      "Use the system appearance, or always use Light or Dark."
     ]
   },
   "sources": {
@@ -4176,6 +4184,13 @@
         "count": 1,
         "kind": "allowlisted",
         "reason": "R5"
+      },
+      {
+        "prefix": "case appearance =",
+        "literal": "\"Appearance\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R9"
       }
     ],
     "Sources/AppLocalization/Localizer.swift": [
@@ -7261,6 +7276,90 @@
         "kind": "allowlisted",
         "reason": "R8"
       }
+    ],
+    "Sources/ChatUI/Appearance.swift": [],
+    "Sources/ChatUI/AppearanceSettings.swift": [
+      {
+        "prefix": "case .system:",
+        "literal": "\"System\"",
+        "count": 1,
+        "kind": "dynamic",
+        "reason": "R9",
+        "keys": {
+          "Appearance": [
+            "System"
+          ]
+        }
+      },
+      {
+        "prefix": "case .light:",
+        "literal": "\"Light\"",
+        "count": 1,
+        "kind": "dynamic",
+        "reason": "R9",
+        "keys": {
+          "Appearance": [
+            "Light"
+          ]
+        }
+      },
+      {
+        "prefix": "case .dark:",
+        "literal": "\"Dark\"",
+        "count": 1,
+        "kind": "dynamic",
+        "reason": "R9",
+        "keys": {
+          "Appearance": [
+            "Dark"
+          ]
+        }
+      },
+      {
+        "prefix": "public static let defaultStorageKey =",
+        "literal": "\"DurableChat.appearanceOverride\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R9"
+      }
+    ],
+    "Sources/ChatUI/AppearancePickerView.swift": [
+      {
+        "prefix": "Text(verbatim: localizer.string(",
+        "literal": "\"Appearance\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R9",
+        "keys": {
+          "Appearance": [
+            "Appearance"
+          ]
+        }
+      },
+      {
+        "prefix": ".help(localizer.string(",
+        "literal": "\"Use the system appearance, or always use Light or Dark.\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R9",
+        "keys": {
+          "Appearance": [
+            "Use the system appearance, or always use Light or Dark."
+          ]
+        }
+      },
+      {
+        "prefix": "Text(verbatim: localizer.string(",
+        "literal": "\"Reset to System\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R9",
+        "keys": {
+          "Appearance": [
+            "Reset to System"
+          ]
+        }
+      }
     ]
   },
   "reservedKeys": {
@@ -7278,6 +7377,7 @@
     "R5": "Foundation identifiers, placeholder grammar, resource paths and preferences. Common keys explicitly linked; never translate stored identifiers.",
     "R6": "Canonical English diagnostic sources linked to Runtime; other literals are stable IDs, operations or model/provider data, not presentation keys.",
     "R7": "Verbatim transcript/model/code data, symbols, accessibility identifiers, key equivalents and parsing delimiters; presentation and AX prose are explicitly linked to ChatUI.",
-    "R8": "App-owned presentation linked to App/Runtime; other literals are nonsecret storage/fixture/protocol data and stable identifiers. Simulated transcripts stay verbatim."
+    "R8": "App-owned presentation linked to App/Runtime; other literals are nonsecret storage/fixture/protocol data and stable identifiers. Simulated transcripts stay verbatim.",
+    "R9": "Appearance-owned labels/help and explicit dynamic choice keys are linked to Appearance. Other literals are canonical nonsecret preference/table identifiers, never display labels."
   }
 }
