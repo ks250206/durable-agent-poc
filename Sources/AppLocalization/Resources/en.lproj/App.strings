@@ -1,0 +1,14 @@
+// Issue #23: app-owned presentation only. Named placeholders, no printf formats.
+"Codex CLI · existing ChatGPT login · usage limits unknown" = "Codex CLI · existing ChatGPT login · usage limits unknown";
+"DEMO • deterministic, read-only sample data" = "DEMO • deterministic, read-only sample data";
+"Demo is read-only. Relaunch without --demo to configure providers." = "Demo is read-only. Relaunch without --demo to configure providers.";
+"Dismiss" = "Dismiss";
+"DurableChat could not open its saved workspace. Check that another copy is not running and that Application Support/DurableChat is readable. Your files have not been reset." = "DurableChat could not open its saved workspace. Check that another copy is not running and that Application Support/DurableChat is readable. Your files have not been reset.";
+"ISOLATED TEST RUNTIME • SIMULATED responses • temporary history • no AI calls" = "ISOLATED TEST RUNTIME • SIMULATED responses • temporary history • no AI calls";
+"Opening saved workspace…" = "Opening saved workspace…";
+"Provider settings will be available after the workspace opens." = "Provider settings will be available after the workspace opens.";
+"Quit DurableChat" = "Quit DurableChat";
+"Ready. Only an explicit Send starts a model request." = "Ready. Only an explicit Send starts a model request.";
+"Settings…" = "Settings…";
+"Some active work could not be saved while closing the runtime." = "Some active work could not be saved while closing the runtime.";
+"The model could not be applied. Refresh Settings and choose an available model." = "The model could not be applied. Refresh Settings and choose an available model.";

@@ -26,7 +26,7 @@ struct ConnectionPresentation: Equatable {
     let symbol: String
     let detail: String?
 
-    init(_ state: ConnectionState, localizer: Localizer = Localizer(language: .english)) {
+    init(_ state: ConnectionState, localizer: Localizer = Localizer(language: .english), diagnosticTemplates: [DiagnosticTemplate] = []) {
         switch state {
         case .connected: (title, symbol, detail) = (localizer.chat("Connected"), "checkmark.circle", nil)
         case .connecting: (title, symbol, detail) = (localizer.chat("Connecting…"), "network", localizer.chat("Waiting for the backend connection."))
@@ -34,7 +34,7 @@ struct ConnectionPresentation: Equatable {
             (title, symbol, detail) = (localizer.chat("Disconnected"), "network.slash", localizer.chat("Connect a provider in Settings to send messages."))
         case .demo:
             (title, symbol, detail) = (localizer.chat("Demo · Read only"), "eye", localizer.chat("Sample conversations. Sending and creating conversations are disabled."))
-        case .failed(let message): (title, symbol, detail) = (localizer.chat("Connection failed"), "exclamationmark.triangle", localizer.diagnostic(message))
+        case .failed(let message): (title, symbol, detail) = (localizer.chat("Connection failed"), "exclamationmark.triangle", localizer.diagnostic(message, templates: diagnosticTemplates))
         }
     }
 }

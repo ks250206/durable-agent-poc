@@ -205,3 +205,15 @@ ChatStore applies the choice/notice atomically with selection and transcript, ex
 The model remains UI-writable for standalone clients; integrated app settings use `ChatBackendRouter.useModel`.
 `ChatStore.stop(conversationID: ConversationID?)` additionally permits pre-Task origin capture; `stop()` remains.
 See [Integration.md](Integration.md) for composite subscription, persisted account bindings and shutdown ownership.
+
+## Issue #23 localization presentation seam
+
+AppSession retains one `LocalizationSettings` and passes it plus its locale to both scenes and
+roots. `LanguagePickerView(localization:)` is reused from #20. Runtime/App tables belong to #23;
+Common/ChatUI remain with #20/#22. `RuntimePresentation.diagnostic(_:localizer:)` and its two
+`diagnosticTemplates` are presentation adapters over canonical English source strings, never a
+backend mutation or transcript transform. ChatUI's optional `EnvironmentValues.chatDiagnosticTemplates`
+(default `[]`) forwards only that explicit runtime allowlist at diagnostic display sites. This small
+adapter is needed for open interpolated failures; ChatUI does not import AgentRuntime and ChatCore
+still does not import AppLocalization. #24 should audit this seam and inventories without absorbing
+provider behavior, changing account/model routing, or replacing persisted source diagnostics.

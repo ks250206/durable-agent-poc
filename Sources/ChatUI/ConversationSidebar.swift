@@ -52,6 +52,7 @@ final class ConversationSidebarActions {
 @MainActor
 public struct ConversationSidebar: View {
     @ChatLocalization private var localization
+    @Environment(\.chatDiagnosticTemplates) private var diagnosticTemplates
     private let store: ChatStore
     private let onSelection: () -> Void
     @StoredState private var actions: ConversationSidebarActions
@@ -100,7 +101,7 @@ public struct ConversationSidebar: View {
 
             if let failure = store.lastFailure, failure.operation == "select" {
                 HStack(alignment: .top) {
-                    Label(localization.diagnostic(failure.message), systemImage: "exclamationmark.triangle")
+                    Label(localization.diagnostic(failure.message, templates: diagnosticTemplates), systemImage: "exclamationmark.triangle")
                         .fixedSize(horizontal: false, vertical: true)
                     Button { store.clearFailure() } label: { Image(systemName: "xmark") }
                         .buttonStyle(.borderless).accessibilityLabel(localization.chat("Dismiss selection error"))

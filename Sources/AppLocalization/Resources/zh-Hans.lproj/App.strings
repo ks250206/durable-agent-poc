@@ -1,0 +1,14 @@
+// Issue #23: app-owned presentation only. Named placeholders, no printf formats.
+"Codex CLI · existing ChatGPT login · usage limits unknown" = "Codex CLI · 现有 ChatGPT 登录 · 使用限制未知";
+"DEMO • deterministic, read-only sample data" = "演示 • 固定的只读示例数据";
+"Demo is read-only. Relaunch without --demo to configure providers." = "演示为只读。请不带 --demo 重新启动以配置提供商。";
+"Dismiss" = "关闭";
+"DurableChat could not open its saved workspace. Check that another copy is not running and that Application Support/DurableChat is readable. Your files have not been reset." = "DurableChat 无法打开已保存的工作区。请确认没有其他副本正在运行，并且 Application Support/DurableChat 可读。您的文件未被重置。";
+"ISOLATED TEST RUNTIME • SIMULATED responses • temporary history • no AI calls" = "隔离测试运行时 • 模拟响应 • 临时历史 • 无 AI 调用";
+"Opening saved workspace…" = "正在打开已保存的工作区…";
+"Provider settings will be available after the workspace opens." = "工作区打开后即可使用提供商设置。";
+"Quit DurableChat" = "退出 DurableChat";
+"Ready. Only an explicit Send starts a model request." = "已就绪。仅明确点击发送才会发起模型请求。";
+"Settings…" = "设置…";
+"Some active work could not be saved while closing the runtime." = "关闭运行时时部分进行中的工作无法保存。";
+"The model could not be applied. Refresh Settings and choose an available model." = "无法应用模型。请刷新设置并选择可用模型。";

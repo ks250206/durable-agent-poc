@@ -249,3 +249,61 @@ Lookup/fallback semantics are based on
 The SwiftUI handoff uses Apple's
 [Text initializer with table and bundle](https://developer.apple.com/documentation/swiftui/text/init(_:tablename:bundle:comment:))
 and [EnvironmentValues.locale](https://developer.apple.com/documentation/swiftui/environmentvalues/locale).
+
+## Issue #23 application/runtime handoff
+
+`AppSession.localization` is the single observable language owner. App, Window, Settings,
+`NativeWorkspaceView`, `NativeSettingsView`, the existing `LanguagePickerView`, and provider settings
+share that reference and its explicit locale. The picker order and Common table stay owned by #20;
+ChatUI/Common tables are unchanged. Language selection and Reset to System are available before
+startup finishes and in demo mode too. `AppDelegate` refreshes System on activation and on the locale
+notification (main-actor hop). Explicit overrides remain selected. Production uses the existing
+`DurableChat.languageOverride`; no `AppleLanguages` mutation or translated persisted state is added.
+Demo/test-runtime create a unique defaults suite, use deterministic English System preferences, and
+remove that suite during shutdown. Tests inject suites/preference providers to verify reopen,
+invalid fallback, System refresh/reset and unchanged unrelated defaults without personal preferences.
+
+Runtime now has **108 keys**, App **13 keys**, in en/ja/zh-Hans/ko in the existing resource bundle.
+`PresentationLocalizationTests` contains the reviewed inventory and verifies exact table parity,
+placeholder contracts, resolved-language provenance, actual translations and the settings source's
+literal labels/failures. Common and ChatUI validation remains with its original owners. App-owned
+Settings and Quit menu commands use the App table; macOS-owned standard menus remain system UI.
+The commands preserve the existing openSettings action and asynchronous AppDelegate termination path.
+
+`AgentRuntime.RuntimePresentation` owns only two explicit `DiagnosticTemplate` adapters:
+
+- `Model selected. Create a new conversation to send with {provider}.`
+- `Cursor CLI failed (exit {code}). Check Cursor login, subscription, and limits.`
+
+`diagnostic(_:localizer:)` applies exact Runtime keys first, then these anchored templates. Captures
+are opaque strings: exit codes and IDs are not parsed/reformatted; typed counts elsewhere continue
+to use the foundation's locale-aware number formatting. The fixed composite Codex login-required
+message has its own exact key. Unknown provider/system text passes through unchanged. There is no
+printf formatting, raw output translation, ChatCore localization dependency, or error-source mutation.
+
+The necessary ChatUI diagnostic adapter seam is `EnvironmentValues.chatDiagnosticTemplates:
+[DiagnosticTemplate]` (default `[]`). NativeWorkspaceView injects the Runtime-owned allowlist;
+ChatUI forwards it only at existing failure/connection/selection diagnostic presentation sites.
+This keeps AgentRuntime out of ChatUI dependencies and covers existing open dynamic Cursor errors.
+It does not affect transcript rendering, conversation titles, user/model text, paths, IDs or secrets.
+Do not register broad provider prose templates or translate those data values as keys.
+
+Language changes invalidate presentation in place. They never key/remount a window, ChatStore,
+TranscriptNavigation, ComposerInput or native editor. Provider settings retain their state/tasks;
+a language change does not refresh provider discovery, choose/apply a model, or start/stop generation.
+The existing API-key/Pi ChatGPT OAuth/Cursor/Codex CLI accounts and routes remain exact. Codex help
+continues to instruct user-run `codex login` / `codex logout`, with unknown quota/entitlement and no
+app login/logout/key operation on that route.
+
+#24 owns repository-wide extraction/validation and CI/final aggregate QA. Consume these table and
+adapter ownership boundaries there; do not duplicate resource tables or move presentation into
+ChatCore. Physical IME/candidate-window behavior and real CLI account/model entitlement remain
+uncertified by the synthetic native hosts and isolated executable fixtures used here.
+
+Local #23 verification: all 136 tests passed, release packaging and deep/strict signature
+verification passed, and the independent packaged Foundation lookup resolved the complete
+Runtime/App tables in every locale. Native host PNGs include settings/provider/status/error
+screens at the required sizes and appearances. CUA confirmed language switching, shared
+workspace propagation, Settings reopen and System reset; its popup safety guard prevented
+certifying the attempted streaming-language/model-selection GUI path. See Integration.md
+for the exact evidence and limits; synthetic composition is not physical IME certification.
