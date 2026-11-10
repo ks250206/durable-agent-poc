@@ -30,7 +30,9 @@ struct CompositionTextView: NSViewRepresentable {
         editor.textContainer?.containerSize = NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
         editor.setAccessibilityLabel("Message")
         editor.string = text
+        context.coordinator.editor = editor
         editor.delegate = context.coordinator
+        editor.textStorage?.delegate = context.coordinator
         editor.onCommittedChange = { [weak coordinator = context.coordinator] in
             coordinator?.committedTextChanged($0)
         }
@@ -50,19 +52,31 @@ struct CompositionTextView: NSViewRepresentable {
     static func dismantleNSView(_ scroll: NSScrollView, coordinator: Coordinator) {
         guard let editor = scroll.documentView as? CompositionNSTextView else { return }
         coordinator.parent.input.detach(editor)
+        editor.textStorage?.delegate = nil
         editor.delegate = nil
+        coordinator.editor = nil
         editor.onSubmit = nil
         editor.onCommittedChange = nil
         editor.onCompositionChange = nil
     }
 
     @MainActor
-    final class Coordinator: NSObject, NSTextViewDelegate {
+    final class Coordinator: NSObject, NSTextViewDelegate, @preconcurrency NSTextStorageDelegate {
+        // This NSTextStorage belongs to a main-actor NSTextView; AppKit delivers its edits here.
+        weak var editor: CompositionNSTextView?
         var parent: CompositionTextView
         init(_ parent: CompositionTextView) { self.parent = parent }
 
         func committedTextChanged(_ text: String) {
             if parent.text != text { parent.text = text }
+        }
+
+        func textStorage(_ textStorage: NSTextStorage, didProcessEditing editedMask: NSTextStorageEditActions,
+                         range editedRange: NSRange, changeInLength delta: Int) {
+            // Undo/redo can edit storage without NSTextView.textDidChange. The editor guards
+            // in-flight marked-text mutations before exposing committed text to SwiftUI.
+            guard editedMask.contains(.editedCharacters) else { return }
+            editor?.publishCommittedText()
         }
 
         func textDidChange(_ notification: Notification) {

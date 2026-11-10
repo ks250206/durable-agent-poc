@@ -170,6 +170,45 @@ struct CompositionTests {
         #expect(editor.string.isEmpty)
     }
 
+    @Test func realSwiftUIBindingTracksUndoRedoAndSurvivesRefresh() async throws {
+        let backend = ComposerBackend()
+        let store = ChatStore(backend: backend)
+        let observation = Task { await store.start() }
+        defer { observation.cancel() }
+        store.modelSelection = composerModel
+        await eventually { store.canSend }
+        let host = NSHostingView(rootView: ComposerView(store: store))
+        let window = window(containing: host)
+        defer { window.close() }
+        await eventually { findEditor(host) != nil }
+        let editor = try #require(findEditor(host))
+        #expect(window.makeFirstResponder(editor))
+        let undo = try #require(editor.undoManager)
+        undo.groupsByEvent = false
+        undo.beginUndoGrouping()
+        editor.insertText("Hello 日本語", replacementRange: NSRange(location: NSNotFound, length: 0))
+        undo.endUndoGrouping()
+        #expect(store.draft == editor.string)
+        undo.beginUndoGrouping()
+        store.draft = ""
+        await eventually { editor.string.isEmpty }
+        undo.endUndoGrouping()
+        undo.undo()
+        await eventually { store.draft == "Hello 日本語" }
+        #expect(editor.string == store.draft)
+        host.rootView = ComposerView(store: store)
+        host.layoutSubtreeIfNeeded()
+        #expect(editor.string == "Hello 日本語")
+        undo.redo()
+        await eventually { store.draft.isEmpty }
+        #expect(editor.string.isEmpty)
+        // Undo of ordinary typing must update the binding too.
+        undo.undo()
+        undo.undo()
+        await eventually { store.draft == editor.string }
+        #expect(store.draft.isEmpty)
+    }
+
     @Test func shiftReturnAutoRepeatRemainsNativeEditing() {
         let editor = CompositionNSTextView(frame: .zero)
         let window = window(containing: editor)
