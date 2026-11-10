@@ -144,9 +144,9 @@ extension NativeUITests {
                     #expect(labels(hosted.host).contains(localizer.chat("Copy message")))
                     #expect(labels(hosted.host).contains(localizer.chat("Response stopped")))
                     if width == 1200 {
-                        try await localizedSettle { descendants(hosted.host, of: MinimapInputView.self).count == 1 }
-                        let map = try #require(descendants(hosted.host, of: MinimapInputView.self).first)
-                        #expect(map.accessibilityLabel() == localizer.chat("Full-history role overview"))
+                        try await localizedSettle { descendants(hosted.host, of: PromptRailInputView.self).count == 1 }
+                        let map = try #require(descendants(hosted.host, of: PromptRailInputView.self).first)
+                        #expect(map.accessibilityLabel() == localizer.chat("User input navigation"))
                         #expect(labels(hosted.host).contains(localizer.chat("Search conversations")))
                     }
                     #expect(hosted.host.frame.width == width)
@@ -219,9 +219,9 @@ extension NativeUITests {
         let hosted = LocalizationHost(ChatWorkspaceView(store: store, navigation: navigation) { ComposerView(store: $0) }
             minimap: { ConversationMinimap(store: $0, navigation: $1) }.environment(settings), width: 1200)
         defer { hosted.window.close() }
-        try await localizedSettle { descendants(hosted.host, of: CompositionNSTextView.self).count == 1 && descendants(hosted.host, of: MinimapInputView.self).count == 1 }
+        try await localizedSettle { descendants(hosted.host, of: CompositionNSTextView.self).count == 1 && descendants(hosted.host, of: PromptRailInputView.self).count == 1 }
         let editor = try #require(descendants(hosted.host, of: CompositionNSTextView.self).first)
-        let map = try #require(descendants(hosted.host, of: MinimapInputView.self).first)
+        let map = try #require(descendants(hosted.host, of: PromptRailInputView.self).first)
         navigation.viewport = TranscriptViewport(firstVisibleMessageID: store.messages[0].id, lastVisibleMessageID: store.messages[1].id)
         navigation.jump(to: store.messages[0].id)
         try await Task.sleep(for: .milliseconds(100))
@@ -237,9 +237,9 @@ extension NativeUITests {
         for choice in [LanguageChoice.japanese, .simplifiedChinese, .korean, .english] {
             settings.choice = choice
             let localizer = settings.localizer
-            try await localizedSettle { editor.accessibilityLabel() == localizer.chat("Message") && map.accessibilityLabel() == localizer.chat("Full-history role overview") }
+            try await localizedSettle { editor.accessibilityLabel() == localizer.chat("Message") && map.accessibilityLabel() == localizer.chat("User input navigation") }
             #expect(descendants(hosted.host, of: CompositionNSTextView.self).first === editor)
-            #expect(descendants(hosted.host, of: MinimapInputView.self).first === map)
+            #expect(descendants(hosted.host, of: PromptRailInputView.self).first === map)
             #expect(editor.hasMarkedText())
             #expect(editor.string == text)
             #expect(editor.markedRange() == marked)
@@ -265,7 +265,7 @@ extension NativeUITests {
         defer { observation.cancel() }
         try await localizedSettle { store.messages.count == 2 }
         let navigation = TranscriptNavigation()
-        let hosted = LocalizationHost(ConversationMinimap(store: store, navigation: navigation).environment(settings), width: 400)
+        let hosted = LocalizationHost(ConversationTrajectory(store: store, navigation: navigation).environment(settings), width: 400)
         defer { hosted.window.close() }
         try await localizedSettle { descendants(hosted.host, of: MinimapInputView.self).count == 1 }
         let map = try #require(descendants(hosted.host, of: MinimapInputView.self).first)

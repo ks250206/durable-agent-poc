@@ -90,6 +90,8 @@ import SwiftUI
             label.lineBreakMode = .byTruncatingTail
         }
         search.delegate = self
+        search.target = self
+        search.action = #selector(searchChanged)
         search.sendsSearchStringImmediately = true
         search.setAccessibilityIdentifier("trajectory.search")
         numberField.delegate = self
@@ -328,6 +330,10 @@ import SwiftUI
         if obj.object as AnyObject? === numberField {
             goButton.isEnabled = MessageNumberInput.targetIndex(numberField.stringValue, count: messages.count, locale: localizer.locale) != nil
         } else { copiedID = nil; rebuild() }
+    }
+    @objc private func searchChanged() {
+        copiedID = nil
+        rebuild()
     }
     @objc private func jumpByNumber() {
         guard let index = MessageNumberInput.targetIndex(numberField.stringValue, count: messages.count, locale: localizer.locale) else { return }

@@ -1,8 +1,8 @@
 import ChatCore
 import SwiftUI
 
-/// Compatibility entry point. The former role map is now the standalone trajectory.
-/// Application tab composition belongs to #38; the thin chat-edge navigator is PromptRail.
+/// Compact compatibility entry point for the existing sidebar/popover slot.
+/// The full ConversationTrajectory is mounted separately as an application tab in #38.
 @MainActor public struct ConversationMinimap: View {
     private let store: ChatStore
     private let navigation: TranscriptNavigation
@@ -12,5 +12,5 @@ import SwiftUI
         self.navigation = navigation
     }
 
-    public var body: some View { ConversationTrajectory(store: store, navigation: navigation) }
+    public var body: some View { PromptRail(store: store, navigation: navigation) }
 }

@@ -150,6 +150,32 @@ private actor TrajectoryBackend: ChatBackend {
 
 extension NativeUITests {
 @Suite @MainActor struct TrajectoryNativeTests {
+    @Test func compatibilityMapFitsExistingNarrowSlotsAndKeepsExactPromptJumps() async throws {
+        let messages = trajectoryMessages(20)
+        let store = ChatStore(backend: TrajectoryBackend(messages))
+        let observation = Task { await store.start() }
+        defer { observation.cancel() }
+        try await trajectorySettle { store.messages.count == messages.count }
+        for width: CGFloat in [144, 240] {
+            let navigation = TranscriptNavigation()
+            let host = NSHostingView(rootView: ConversationMinimap(store: store, navigation: navigation))
+            host.sizingOptions = []
+            let window = try trajectoryWindow(host, width: width)
+            window.setContentSize(NSSize(width: width, height: 420))
+            defer { window.close() }
+            try await trajectorySettle { trajectoryFind(host, PromptRailInputView.self).count == 1 }
+            #expect(trajectoryFind(host, TrajectoryView.self).isEmpty)
+            let input = try #require(trajectoryFind(host, PromptRailInputView.self).first)
+            try await trajectorySettle { input.frame.height <= 420 }
+            #expect(input.frame.width == 40 && input.frame.height <= 420)
+            let prompts = messages.filter { $0.role == .user }
+            for prompt in prompts {
+                #expect(input.accessibilityPerformIncrement())
+                #expect(navigation.scrollRequest?.messageID == prompt.id)
+            }
+        }
+    }
+
     @Test func realClickKeyboardHoverAXAndExactNumberReachFullHistoryWithoutChangingViewport() async throws {
         await Task.yield()
         let view = TrajectoryView(frame: CGRect(x: 0, y: 0, width: 400, height: 760))
@@ -254,7 +280,7 @@ extension NativeUITests {
         #expect(view.selectedID == messages[2].id && view.detail.string == messages[2].content)
         try trajectoryCapture(view, "search-no-result-ja-400")
         view.search.stringValue = ""
-        view.controlTextDidChange(Notification(name: NSControl.textDidChangeNotification, object: view.search))
+        #expect(view.search.sendAction(view.search.action, to: view.search.target))
         #expect(view.filtered.allSatisfy { messages[$0].role == .user })
     }
 

@@ -416,9 +416,16 @@ as test fixtures/artifacts. Tests use fresh disposable defaults and no provider/
 `@MainActor public ConversationTrajectory(store: ChatStore, navigation: TranscriptNavigation): View`
 provides a standalone, read-only full-history inspector. Pass the **same instances** as the chat
 transcript; the existing owner still starts `store.start()` exactly once. The public
-`ConversationMinimap(store:navigation:)` initializer remains compatible and forwards to this
-component. The retired vertical role map and modal message list no longer occupy that entry point.
+`ConversationMinimap(store:navigation:)` initializer remains compatible and supplies the compact
+`PromptRail` in the existing narrow map/popover slot until #38 lands. It does not squeeze the full
+trajectory into that slot. The retired vertical role map and modal message list no longer occupy it.
 `PromptRail` remains the independent thin right-edge chat navigator.
+
+CI completion evidence is checked against every discovered test ID using the
+[verified test runner](../scripts/README-tests.md). Native functions run sequentially
+in separate processes, without retries or skipped assertions. A green exit without
+the complete xUnit evidence is rejected. The original grouped author/CI run did not
+finish ChatUI and is not full-suite evidence.
 
 #38 owns tab selection, workspace/root composition and transcript jump consumption. Use the ChatUI
 keys **Chat** and **Trajectory** for its tab labels. Mount the trajectory as its own full pane (tested
