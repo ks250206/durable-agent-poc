@@ -164,6 +164,13 @@ private actor RailTestBackend: ChatBackend {
                           styleMask: [.titled], backing: .buffered, defer: false)
     window.isReleasedWhenClosed = false
     window.contentView = view
+    if let screen = NSScreen.main {
+        let visible = screen.visibleFrame
+        // CI may have a 1024 pt display while the offscreen render host is 1200 pt.
+        // Keep the trailing interactive strip reachable instead of synthesizing hover offscreen.
+        window.setFrameOrigin(CGPoint(x: min(200, visible.maxX - window.frame.width - 12),
+                                      y: max(visible.minY + 12, min(200, visible.maxY - window.frame.height - 12))))
+    }
     window.makeKeyAndOrderFront(nil)
     view.layoutSubtreeIfNeeded()
     return window
@@ -279,7 +286,10 @@ extension NativeUITests {
                     // Exercise the first and last popup anchors at every locale/host size.
                     for index in [0, 2] {
                         let cell = input.geometry.cell(for: index)
-                        input.mouseEntered(with: try railMouse(.mouseEntered, CGPoint(x: 3, y: cell.midY), input))
+                        let hoverPoint = CGPoint(x: 3, y: cell.midY)
+                        let screenPoint = window.convertPoint(toScreen: input.convert(hoverPoint, to: nil))
+                        if let screen = window.screen { try #require(screen.visibleFrame.contains(screenPoint)) }
+                        input.mouseEntered(with: try railMouse(.mouseEntered, hoverPoint, input))
                         #expect(input.previewText == store.messages[index * 2].content)
                         let popup = try #require(NSApplication.shared.windows.first { $0.isVisible && $0 !== window && railFind($0.contentView ?? NSView(), NSTextView.self).contains { $0.string == store.messages[index * 2].content } })
                         if let screen = popup.screen { #expect(screen.visibleFrame.insetBy(dx: -2, dy: -2).contains(popup.frame)) }
@@ -431,7 +441,6 @@ extension NativeUITests {
         #expect(navigation.scrollRequest?.messageID == messages[messages.count - 4].id)
         try await Task.sleep(for: .milliseconds(100))
         #expect(input.cursorID == messages[messages.count - 4].id)
-
     }
 
     @Test func reduceMotionAndIncreasedContrastKeepReadableNativeBarsAndStableCells() throws {
