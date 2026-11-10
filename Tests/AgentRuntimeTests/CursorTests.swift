@@ -275,13 +275,28 @@ private func settled(_ backend: CursorChatBackend, _ id: ConversationID) async t
         try await eventually { await backend.subscriberCount == 1 }
         try await backend.send(SendRequest(conversationID: id, text: "hang", model: fixture.model))
         try await eventually { FileManager.default.fileExists(atPath: fixture.root.appendingPathComponent("childpid").path) }
+        // The child marker only means the producer flushed its partial frame. Wait for
+        // the backend to consume it before comparing snapshots across actor suspensions.
+        // The fixture emits nothing else until Stop, so this is a stable checkpoint.
+        try await eventually {
+            let conversation = try await backend.snapshot().loadedConversations.first
+            return conversation?.messages.last?.content == "partial " && conversation?.activity == .streaming
+        }
         observer.cancel()
         _ = await observer.result
         try await eventually { await backend.subscriberCount == 0 }
         #expect(try await backend.snapshot().loadedConversations.first?.activity.isBusy == true)
+        let expected = try await backend.snapshot()
         var second = await backend.events().makeAsyncIterator()
-        #expect(try await second.next() == .snapshot(try await backend.snapshot()))
+        #expect(try await second.next() == .snapshot(expected))
+        #expect(await backend.subscriberCount == 1)
         try await backend.stop(conversationID: id)
+        guard case .conversationUpdated(let stopped) = try await second.next() else {
+            Issue.record("New subscriber did not receive the stop update"); return
+        }
+        #expect(stopped.activity == .idle && stopped.messages.last?.status == .stopped)
+        #expect(stopped.messages.last?.id == expected.loadedConversations.first?.messages.last?.id)
+        #expect(stopped.messages.last?.content == "partial ")
     }
 
     @Test func settingsDiscoveryUnsupportedCLIAndOfficialLoginCancellation() async throws {
