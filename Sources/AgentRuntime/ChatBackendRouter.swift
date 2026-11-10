@@ -46,6 +46,7 @@ public actor ChatBackendRouter: ChatBackend {
 
     public static func route(for account: ProviderAccount) -> Route? {
         switch account.option {
+        case .codexCLI: nil // Runtime composition is owned by #21.
         case .cursor: account == CursorProviderSettingsService.account ? .cursor : nil
         case .chatGPT: account.providerID == "openai-codex" ? .pi : nil
         case .apiKey: !account.providerID.isEmpty && account.providerID != "cursor" && account.providerID != "openai-codex" ? .pi : nil
