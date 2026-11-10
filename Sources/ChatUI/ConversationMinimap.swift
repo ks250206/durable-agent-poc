@@ -409,8 +409,7 @@ private struct MinimapMessageList: View {
     @MinimapState private var messageNumber = ""
 
     private var targetIndex: Int? {
-        guard let value = Int(messageNumber), value > 0, value <= messages.count else { return nil }
-        return value - 1
+        MessageNumberInput.targetIndex(messageNumber, count: messages.count, locale: localization.locale)
     }
 
     var body: some View {

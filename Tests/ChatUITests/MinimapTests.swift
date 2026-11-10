@@ -269,7 +269,7 @@ struct MinimapNativeHostTests {
         sheet.makeFirstResponder(numberField)
         numberField.selectText(nil)
         let editor = try #require(numberField.currentEditor())
-        editor.insertText("9000")
+        editor.insertText("9,000")
         pumpRunLoop()
         try capture(sheetContent, name: "all-messages")
         let beforeListJump = navigation.scrollRequest?.id

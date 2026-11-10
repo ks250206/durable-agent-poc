@@ -159,3 +159,21 @@ private let chatUIKeys: Set<String> = [
     // Legacy pure-logic callers keep their English default.
     #expect(ConnectionPresentation(.connected).title == "Connected")
 }
+
+@Test func messageNumberAcceptsDisplayedLocaleGroupingWithoutPartialParses() {
+    for language in AppLanguage.allCases {
+        let localizer = Localizer(language: language)
+        for value in [1, 9_000, 10_000] {
+            let displayed = value.formatted(.number.locale(localizer.locale))
+            #expect(MessageNumberInput.targetIndex(displayed, count: 10_000, locale: localizer.locale) == value - 1)
+            #expect(MessageNumberInput.targetIndex(String(value), count: 10_000, locale: localizer.locale) == value - 1)
+        }
+        for invalid in ["", "0", "-1", "+1", "10,00", "1,000.0", "1e3", "1,000abc", "10,001", "999999999999999999999999"] {
+            #expect(MessageNumberInput.targetIndex(invalid, count: 10_000, locale: localizer.locale) == nil)
+        }
+    }
+    #expect(Localizer(language: .korean).chat("Conversation not loaded") == "대화가 아직 로드되지 않았습니다")
+    let chinese = Localizer(language: .simplifiedChinese)
+    #expect(chinese.chat("How can I help?") == "有什么可以帮你？")
+    #expect(chinese.chat("Your conversations will appear here.") == "你的对话将显示在这里。")
+}

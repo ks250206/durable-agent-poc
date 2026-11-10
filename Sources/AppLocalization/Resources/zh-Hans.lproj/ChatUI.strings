@@ -38,7 +38,7 @@
 "Failed" = "失败";
 "Go" = "跳转";
 "Hover to preview. Click to jump.\n↑ ↓ navigate · Home / End" = "悬停预览，点击跳转。\n↑ ↓ 导航 · Home / End";
-"How can I help?" = "有什么可以帮您？";
+"How can I help?" = "有什么可以帮你？";
 "Jump to latest message" = "跳转到最新消息";
 "Latest" = "最新消息";
 "Loading messages…" = "正在加载消息…";
@@ -88,7 +88,7 @@
 "Waiting for the backend to load this conversation." = "正在等待后端加载此对话。";
 "Write a message below when your provider and model are ready." = "提供商和模型准备就绪后，请在下方输入消息。";
 "You" = "你";
-"Your conversations will appear here." = "您的对话将显示在这里。";
+"Your conversations will appear here." = "你的对话将显示在这里。";
 "{conversations}; {messages}." = "{conversations}；{messages}。";
 "{count} message · entire history" = "{count} 条消息 · 全部历史";
 "{count} message. Visible range unavailable." = "{count} 条消息。无法获取可见范围。";

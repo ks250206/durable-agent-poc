@@ -14,7 +14,7 @@
 "Connection failed" = "연결 실패";
 "Conversation map" = "대화 맵";
 "Conversation map help" = "대화 맵 도움말";
-"Conversation not loaded" = "대화를 불러오지 못했습니다";
+"Conversation not loaded" = "대화가 아직 로드되지 않았습니다";
 "Conversation transcript" = "대화 내용";
 "Conversations" = "대화";
 "Copied" = "복사됨";
