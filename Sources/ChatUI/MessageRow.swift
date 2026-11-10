@@ -1,4 +1,5 @@
 import AppKit
+import AppLocalization
 import ChatCore
 import SwiftUI
 
@@ -74,6 +75,7 @@ enum MessageLinkPolicy {
 
 @MainActor
 public struct MessageRow: View {
+    @ChatLocalization private var localization
     public let message: ChatMessage
 
     public init(message: ChatMessage) { self.message = message }
@@ -84,11 +86,11 @@ public struct MessageRow: View {
                 Image(systemName: roleSymbol).foregroundStyle(.secondary).accessibilityHidden(true)
                 Text(roleTitle).font(.headline)
                 Spacer(minLength: 4)
-                CopyTextButton(text: message.content, label: "Copy message")
+                CopyTextButton(text: message.content, label: localization.chat("Copy message"))
             }
             VStack(alignment: .leading, spacing: 12) {
                 if message.content.isEmpty {
-                    Text(message.status == .streaming ? "Waiting for response…" : "Empty message")
+                    Text(message.status == .streaming ? localization.chat("Waiting for response…") : localization.chat("Empty message"))
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(Array(MessageBlock.parse(message.content).enumerated()), id: \.offset) { _, block in
@@ -110,7 +112,7 @@ public struct MessageRow: View {
             MessageLinkPolicy.allows(url) ? .systemAction : .discarded
         })
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(roleTitle) message")
+        .accessibilityLabel(localization.chat("{role} message", ["role": .string(roleTitle)]))
         .accessibilityIdentifier("message.\(message.id.rawValue)")
     }
 
@@ -141,12 +143,7 @@ public struct MessageRow: View {
     }
 
     private var roleTitle: String {
-        switch message.role {
-        case .user: "You"
-        case .assistant: "Assistant"
-        case .system: "System"
-        case .tool: "Tool"
-        }
+        localization.role(message.role, userIsYou: true)
     }
     private var roleSymbol: String {
         switch message.role {
@@ -159,24 +156,25 @@ public struct MessageRow: View {
     private var statusLabel: (title: String, symbol: String)? {
         switch message.status {
         case .complete: nil
-        case .streaming: ("Responding…", "ellipsis")
-        case .stopped: ("Response stopped", "stop.circle")
-        case .failed: ("Response failed", "exclamationmark.triangle")
+        case .streaming: (localization.chat("Responding…"), "ellipsis")
+        case .stopped: (localization.chat("Response stopped"), "stop.circle")
+        case .failed: (localization.chat("Response failed"), "exclamationmark.triangle")
         }
     }
 }
 
 @MainActor
 private struct CodeBlockView: View {
+    @ChatLocalization private var localization
     let language: String?
     let text: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text(language ?? "Code").font(.caption.monospaced()).lineLimit(1)
+                Text(language ?? localization.chat("Code")).font(.caption.monospaced()).lineLimit(1)
                 Spacer(minLength: 8)
-                CopyTextButton(text: text, label: "Copy code")
+                CopyTextButton(text: text, label: localization.chat("Copy code"))
             }.padding(10)
             Divider()
             ScrollView(.horizontal) {
@@ -185,7 +183,7 @@ private struct CodeBlockView: View {
                     .fixedSize(horizontal: true, vertical: true)
                     .padding(12)
             }
-            .accessibilityLabel("\(language ?? "Code") code block, horizontally scrollable")
+            .accessibilityLabel(localization.chat("{language} code block, horizontally scrollable", ["language": .string(language ?? localization.chat("Code"))]))
         }
         .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
         .background(ChatTheme.inset, in: RoundedRectangle(cornerRadius: 10))
@@ -195,21 +193,29 @@ private struct CodeBlockView: View {
 }
 
 @MainActor
-private struct CopyTextButton: View {
+struct CopyTextButton: View {
+    @ChatLocalization private var localization
     let text: String
     let label: String
+    private let pasteboard: NSPasteboard
     @StoredState private var copied = false
+
+    init(text: String, label: String, pasteboard: NSPasteboard = .general) {
+        self.text = text
+        self.label = label
+        self.pasteboard = pasteboard
+    }
 
     var body: some View {
         Button {
-            NSPasteboard.general.clearContents()
-            copied = NSPasteboard.general.setString(text, forType: .string)
+            pasteboard.clearContents()
+            copied = pasteboard.setString(text, forType: .string)
             NSAccessibility.post(element: NSApplication.shared, notification: .announcementRequested,
-                                 userInfo: [.announcement: copied ? "Copied to clipboard" : "Copy failed",
+                                 userInfo: [.announcement: copied ? localization.chat("Copied to clipboard") : localization.chat("Copy failed"),
                                             .priority: NSAccessibilityPriorityLevel.medium.rawValue])
-        } label: { Label(copied ? "Copied" : label, systemImage: copied ? "checkmark" : "doc.on.doc").labelStyle(.iconOnly) }
-        .buttonStyle(.borderless).accessibilityLabel(copied ? "Copied to clipboard" : label)
-        .help(copied ? "Copied" : label)
+        } label: { Label(copied ? localization.chat("Copied") : label, systemImage: copied ? "checkmark" : "doc.on.doc").labelStyle(.iconOnly) }
+        .buttonStyle(.borderless).accessibilityLabel(copied ? localization.chat("Copied to clipboard") : label)
+        .help(copied ? localization.chat("Copied") : label)
         .task(id: copied) {
             guard copied else { return }
             do { try await Task.sleep(for: .seconds(2)); copied = false } catch {}

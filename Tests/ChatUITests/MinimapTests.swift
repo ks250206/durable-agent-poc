@@ -1,4 +1,5 @@
 import AppKit
+import AppLocalization
 import ChatCore
 import SwiftUI
 import Testing
@@ -112,7 +113,7 @@ struct MinimapNativeHostTests {
             store: store, navigation: navigation, composer: { _ in EmptyView() },
             minimap: { store, navigation in ConversationMinimap(store: store, navigation: navigation) }
         )
-        let host = NSHostingView(rootView: workspace)
+        let host = NSHostingView(rootView: workspace.environment(\.locale, Locale(identifier: "en")))
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1280, height: 760), styleMask: [.titled], backing: .buffered,
             defer: false)
@@ -229,7 +230,7 @@ struct MinimapNativeHostTests {
             contentRect: NSRect(x: 0, y: 0, width: 180, height: 700), styleMask: [.titled, .resizable],
             backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
-        let host = NSHostingView(rootView: ConversationMinimap(store: store, navigation: navigation))
+        let host = NSHostingView(rootView: ConversationMinimap(store: store, navigation: navigation).environment(\.locale, Locale(identifier: "en")))
         window.contentView = host
         defer { window.close() }
         window.makeKeyAndOrderFront(nil)
@@ -268,7 +269,7 @@ struct MinimapNativeHostTests {
         sheet.makeFirstResponder(numberField)
         numberField.selectText(nil)
         let editor = try #require(numberField.currentEditor())
-        editor.insertText("9000")
+        editor.insertText("9,000")
         pumpRunLoop()
         try capture(sheetContent, name: "all-messages")
         let beforeListJump = navigation.scrollRequest?.id

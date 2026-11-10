@@ -1,3 +1,4 @@
+import AppLocalization
 import ChatCore
 import SwiftUI
 
@@ -58,6 +59,7 @@ struct TranscriptScrollState {
 /// a row taller than the viewport. Navigation is reset when the selected conversation changes.
 @MainActor
 public struct TranscriptView: View {
+    @ChatLocalization private var localization
     private let store: ChatStore
     private let navigation: TranscriptNavigation
 
@@ -69,16 +71,16 @@ public struct TranscriptView: View {
     public var body: some View {
         Group {
             if let id = store.selectedConversationID, store.selectedConversation == nil {
-                ContentUnavailableView("Conversation not loaded", systemImage: "bubble.left",
-                                       description: Text("Waiting for the backend to load this conversation."))
+                ContentUnavailableView(localization.chat("Conversation not loaded"), systemImage: "bubble.left",
+                                       description: Text(localization.chat("Waiting for the backend to load this conversation.")))
                     .id(id)
             } else if store.messages.isEmpty {
                 ContentUnavailableView {
-                    Label(store.selectedConversationID == nil ? "How can I help?" : "Start a conversation", systemImage: "sparkles")
+                    Label(store.selectedConversationID == nil ? localization.chat("How can I help?") : localization.chat("Start a conversation"), systemImage: "sparkles")
                 } description: {
                     Text(store.selectedConversationID == nil
-                         ? "Select a conversation or create a new one to get started."
-                         : "Write a message below when your provider and model are ready.")
+                         ? localization.chat("Select a conversation or create a new one to get started.")
+                         : localization.chat("Write a message below when your provider and model are ready."))
                 }
             } else {
                 TranscriptContent(conversationID: store.selectedConversationID, messages: store.messages, navigation: navigation)
@@ -90,12 +92,14 @@ public struct TranscriptView: View {
         .onChange(of: store.messages.isEmpty) { _, empty in
             if empty { navigation.viewport = TranscriptViewport() }
         }
-        .accessibilityLabel("Conversation transcript")
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(localization.chat("Conversation transcript"))
     }
 }
 
 @MainActor
 private struct TranscriptContent: View {
+    @ChatLocalization private var localization
     let conversationID: ConversationID?
     let messages: [ChatMessage]
     let navigation: TranscriptNavigation
@@ -154,9 +158,9 @@ private struct TranscriptContent: View {
                             withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
                                 proxy.scrollTo(Anchor.bottom, anchor: .bottom)
                             }
-                        } label: { Label("Latest", systemImage: "arrow.down") }
+                        } label: { Label(localization.chat("Latest"), systemImage: "arrow.down") }
                         .buttonStyle(.bordered).background(.regularMaterial, in: Capsule())
-                        .accessibilityLabel("Jump to latest message").padding(16)
+                        .accessibilityLabel(localization.chat("Jump to latest message")).padding(16)
                     }
                 }
             }

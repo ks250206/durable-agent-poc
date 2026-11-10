@@ -84,3 +84,22 @@ struct MinimapLayout {
         size.width.isFinite && size.height.isFinite && size.width > 0 && size.height > 0
     }
 }
+
+/// Accept plain digits or the exact localized integer format displayed by the number hint.
+/// Canonical comparison rejects partial parses, decimals and malformed grouping.
+enum MessageNumberInput {
+    static func targetIndex(_ source: String, count: Int, locale: Locale) -> Int? {
+        let text = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        let formatter = NumberFormatter()
+        formatter.locale = locale
+        formatter.numberStyle = .decimal
+        let separator = formatter.groupingSeparator ?? ""
+        let digits = separator.isEmpty ? text : text.replacingOccurrences(of: separator, with: "")
+        guard !digits.isEmpty,
+              digits.utf8.allSatisfy({ (48...57).contains($0) }),
+              let value = Int(digits), value > 0, value <= count,
+              text == digits || text == value.formatted(.number.locale(locale))
+        else { return nil }
+        return value - 1
+    }
+}
