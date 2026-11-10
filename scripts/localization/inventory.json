@@ -4534,69 +4534,7 @@
     ],
     "Sources/ChatUI/ChatShellView.swift": [
       {
-        "prefix": "",
-        "literal": "\"conversations\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "",
-        "literal": "\"messages\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "\"conversations\": .string(localization.chatCount(store.conversations.count, one:",
-        "literal": "\"{count} sample conversation\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "{count} sample conversation"
-          ]
-        }
-      },
-      {
-        "prefix": "\"conversations\": .string(localization.chatCount(store.conversations.count, one: \"{count} sample conversation\", other:",
-        "literal": "\"{count} sample conversations\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "{count} sample conversations"
-          ]
-        }
-      },
-      {
-        "prefix": "\"messages\": .string(localization.chatCount(store.messages.count, one:",
-        "literal": "\"{count} sample message\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "{count} sample message"
-          ]
-        }
-      },
-      {
-        "prefix": "\"messages\": .string(localization.chatCount(store.messages.count, one: \"{count} sample message\", other:",
-        "literal": "\"{count} sample messages\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "{count} sample messages"
-          ]
-        }
-      },
-      {
-        "prefix": ".accessibilityLabel(localization.chat(",
+        "prefix": "workspace.accessibilityLabel(localization.chat(",
         "literal": "\"DurableChat application shell\"",
         "count": 1,
         "kind": "localized",
@@ -4604,61 +4542,6 @@
         "keys": {
           "ChatUI": [
             "DurableChat application shell"
-          ]
-        }
-      },
-      {
-        "prefix": "Text(",
-        "literal": "\"DurableChat\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "Text(localization.chat(",
-        "literal": "\"Choose and configure a provider when runtime integration is installed.\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Choose and configure a provider when runtime integration is installed."
-          ]
-        }
-      },
-      {
-        "prefix": "Text(localization.chat(",
-        "literal": "\"DEMO — read-only sample data\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "DEMO — read-only sample data"
-          ]
-        }
-      },
-      {
-        "prefix": "Text(localization.chat(",
-        "literal": "\"No backend connected\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "No backend connected"
-          ]
-        }
-      },
-      {
-        "prefix": "Text(verbatim: localization.chat(",
-        "literal": "\"{conversations}; {messages}.\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "{conversations}; {messages}."
           ]
         }
       }
@@ -4686,6 +4569,20 @@
         "reason": "R7"
       },
       {
+        "prefix": ".accessibilityIdentifier(",
+        "literal": "\"chat.workspace.sidebar\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": ".accessibilityIdentifier(",
+        "literal": "\"chat.workspace.stop\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
         "prefix": ".accessibilityLabel(localization.chat(",
         "literal": "\"Selected model\"",
         "count": 1,
@@ -4694,6 +4591,18 @@
         "keys": {
           "ChatUI": [
             "Selected model"
+          ]
+        }
+      },
+      {
+        "prefix": ".accessibilityLabel(localization.chat(",
+        "literal": "\"Show transcript overview\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "Show transcript overview"
           ]
         }
       },
@@ -4711,6 +4620,18 @@
       },
       {
         "prefix": ".accessibilityLabel(localization.chat(",
+        "literal": "\"Toggle conversations sidebar\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "Toggle conversations sidebar"
+          ]
+        }
+      },
+      {
+        "prefix": ".accessibilityLabel(localization.chat(",
         "literal": "\"Transcript overview\"",
         "count": 1,
         "kind": "localized",
@@ -4722,7 +4643,14 @@
         }
       },
       {
-        "prefix": ".accessibilityValue(store.modelSelection?.modelID ?? localization.chat(",
+        "prefix": ".accessibilityValue(store.modelSelection.map {",
+        "literal": "\"\\($0.modelID) · \\($0.account.providerID)\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": ".accessibilityValue(store.modelSelection.map { \"\\($0.modelID) · \\($0.account.providerID)\" } ?? localization.chat(",
         "literal": "\"None\"",
         "count": 1,
         "kind": "localized",
@@ -4734,7 +4662,7 @@
         }
       },
       {
-        "prefix": ".buttonStyle(.borderless).accessibilityLabel(localization.chat(",
+        "prefix": ".buttonStyle(WorkspaceButtonStyle()).accessibilityLabel(localization.chat(",
         "literal": "\"Dismiss error\"",
         "count": 1,
         "kind": "localized",
@@ -4742,30 +4670,6 @@
         "keys": {
           "ChatUI": [
             "Dismiss error"
-          ]
-        }
-      },
-      {
-        "prefix": ".buttonStyle(.borderless).accessibilityLabel(localization.chat(",
-        "literal": "\"Show transcript overview\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Show transcript overview"
-          ]
-        }
-      },
-      {
-        "prefix": ".buttonStyle(.borderless).accessibilityLabel(localization.chat(",
-        "literal": "\"Toggle conversations sidebar\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Toggle conversations sidebar"
           ]
         }
       },
@@ -4782,11 +4686,35 @@
         }
       },
       {
-        "prefix": "Button { minimapPresented.toggle() } label: { Image(systemName:",
-        "literal": "\"rectangle.trailingthird.inset.filled\"",
+        "prefix": ".help(store.modelSelection.map {",
+        "literal": "\"\\($0.modelID) · \\($0.account.providerID)\"",
         "count": 1,
         "kind": "allowlisted",
         "reason": "R7"
+      },
+      {
+        "prefix": ".help(store.modelSelection.map { \"\\($0.modelID) · \\($0.account.providerID)\" } ?? localization.chat(",
+        "literal": "\"No model selected\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "No model selected"
+          ]
+        }
+      },
+      {
+        "prefix": ".map { ConversationFilter.title($0, localizer: localization) } ?? localization.chat(",
+        "literal": "\"New conversation\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "New conversation"
+          ]
+        }
       },
       {
         "prefix": "Button { store.clearFailure() } label: { Image(systemName:",
@@ -4796,16 +4724,37 @@
         "reason": "R7"
       },
       {
-        "prefix": "HStack { Spacer(); Button(localization.chat(",
-        "literal": "\"Done\"",
+        "prefix": "Image(systemName:",
+        "literal": "\"rectangle.trailingthird.inset.filled\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "Image(systemName:",
+        "literal": "\"sidebar.left\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "Label(localization.chat(",
+        "literal": "\"Stop\"",
         "count": 1,
         "kind": "localized",
         "reason": "R4",
         "keys": {
           "ChatUI": [
-            "Done"
+            "Stop"
           ]
         }
+      },
+      {
+        "prefix": "Label(localization.chat(\"Stop\"), systemImage:",
+        "literal": "\"stop.fill\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
       },
       {
         "prefix": "Label(localization.diagnostic(failure.message, templates: diagnosticTemplates), systemImage:",
@@ -4822,14 +4771,14 @@
         "reason": "R7"
       },
       {
-        "prefix": "Text(store.conversations.first(where: { $0.id == store.selectedConversationID }).map { ConversationFilter.title($0, localizer: localization) } ?? localization.chat(",
-        "literal": "\"New conversation\"",
+        "prefix": "Text(localization.chat(",
+        "literal": "\"Done\"",
         "count": 1,
         "kind": "localized",
         "reason": "R4",
         "keys": {
           "ChatUI": [
-            "New conversation"
+            "Done"
           ]
         }
       },
@@ -4899,32 +4848,6 @@
             "Sending…"
           ]
         }
-      },
-      {
-        "prefix": "} label: { Image(systemName:",
-        "literal": "\"sidebar.left\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "} label: { Label(localization.chat(",
-        "literal": "\"Stop\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Stop"
-          ]
-        }
-      },
-      {
-        "prefix": "} label: { Label(localization.chat(\"Stop\"), systemImage:",
-        "literal": "\"stop.fill\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
       }
     ],
     "Sources/ChatUI/ComposerView.swift": [
@@ -5511,6 +5434,39 @@
     ],
     "Sources/ChatUI/ConversationSidebar.swift": [
       {
+        "prefix": ".accessibilityIdentifier(",
+        "literal": "\"chat.sidebar.create\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": ".accessibilityIdentifier(",
+        "literal": "\"chat.sidebar.row.\\(summary.id.rawValue)\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": ".accessibilityIdentifier(",
+        "literal": "\"chat.sidebar.search\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": ".accessibilityLabel(localization.chat(",
+        "literal": "\"Clear conversation search\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "Clear conversation search"
+          ]
+        }
+      },
+      {
         "prefix": ".accessibilityLabel(localization.chat(",
         "literal": "\"Conversations\"",
         "count": 1,
@@ -5519,6 +5475,18 @@
         "keys": {
           "ChatUI": [
             "Conversations"
+          ]
+        }
+      },
+      {
+        "prefix": ".accessibilityLabel(localization.chat(",
+        "literal": "\"Dismiss selection error\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "Dismiss selection error"
           ]
         }
       },
@@ -5535,7 +5503,7 @@
         }
       },
       {
-        "prefix": ".accessibilityValue(store.loadedConversations[summary.id]?.activity.isBusy == true ? localization.chat(",
+        "prefix": ".accessibilityLabel(localization.chat(",
         "literal": "\"Response in progress\"",
         "count": 1,
         "kind": "localized",
@@ -5547,35 +5515,23 @@
         }
       },
       {
-        "prefix": ".accessibilityValue(store.loadedConversations[summary.id]?.activity.isBusy == true ? localization.chat(\"Response in progress\") :",
-        "literal": "\"\"",
+        "prefix": ".accessibilityLabel(localization.chat(",
+        "literal": "\"Search conversations\"",
         "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "Search conversations"
+          ]
+        }
+      },
+      {
         "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": ".buttonStyle(.borderless).accessibilityLabel(localization.chat(",
-        "literal": "\"Dismiss selection error\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Dismiss selection error"
-          ]
-        }
-      },
-      {
-        "prefix": ".buttonStyle(.plain).foregroundStyle(.secondary).accessibilityLabel(localization.chat(",
-        "literal": "\"Clear conversation search\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Clear conversation search"
-          ]
-        }
+        "reason": "R7",
+        "prefix": ".compactMap { $0 }.joined(separator:",
+        "literal": "\" · \"",
+        "count": 1
       },
       {
         "prefix": ".help(localization.chat(",
@@ -5595,18 +5551,6 @@
         "count": 1,
         "kind": "allowlisted",
         "reason": "R7"
-      },
-      {
-        "prefix": ".textFieldStyle(.plain).accessibilityLabel(localization.chat(",
-        "literal": "\"Search conversations\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Search conversations"
-          ]
-        }
       },
       {
         "prefix": "Button { actions.query =",
@@ -5631,14 +5575,7 @@
       },
       {
         "prefix": "Image(systemName:",
-        "literal": "\"bubble.left\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "Image(systemName:",
-        "literal": "\"bubble.left.and.bubble.right\"",
+        "literal": "\"bubble.left.and.bubble.right.fill\"",
         "count": 1,
         "kind": "allowlisted",
         "reason": "R7"
@@ -5658,43 +5595,7 @@
         "reason": "R7"
       },
       {
-        "prefix": "Image(systemName: \"ellipsis\").accessibilityLabel(localization.chat(",
-        "literal": "\"Response in progress\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Response in progress"
-          ]
-        }
-      },
-      {
-        "prefix": "Label(actions.isCreating ? localization.chat(",
-        "literal": "\"Creating…\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Creating…"
-          ]
-        }
-      },
-      {
-        "prefix": "Label(actions.isCreating ? localization.chat(\"Creating…\") : localization.chat(",
-        "literal": "\"New conversation\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "New conversation"
-          ]
-        }
-      },
-      {
-        "prefix": "Label(actions.isCreating ? localization.chat(\"Creating…\") : localization.chat(\"New conversation\"), systemImage:",
+        "prefix": "Image(systemName:",
         "literal": "\"square.and.pencil\"",
         "count": 1,
         "kind": "allowlisted",
@@ -5709,24 +5610,94 @@
       },
       {
         "prefix": "Text(",
-        "literal": "\"Cursor\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "Text(",
         "literal": "\"DurableChat\"",
         "count": 1,
         "kind": "allowlisted",
         "reason": "R7"
       },
       {
-        "prefix": "Text(",
-        "literal": "\"Pi\"",
+        "prefix": "Text(actions.isCreating ? localization.chat(",
+        "literal": "\"Creating…\"",
         "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "Creating…"
+          ]
+        }
+      },
+      {
+        "prefix": "Text(actions.isCreating ? localization.chat(\"Creating…\") : localization.chat(",
+        "literal": "\"New conversation\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "New conversation"
+          ]
+        }
+      },
+      {
+        "prefix": "Text(actions.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? localization.chat(",
+        "literal": "\"No conversations yet\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "No conversations yet"
+          ]
+        }
+      },
+      {
+        "prefix": "Text(actions.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? localization.chat(",
+        "literal": "\"Your conversations will appear here.\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "Your conversations will appear here."
+          ]
+        }
+      },
+      {
+        "prefix": "Text(actions.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? localization.chat(\"No conversations yet\") : localization.chat(",
+        "literal": "\"No matches\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "No matches"
+          ]
+        }
+      },
+      {
+        "prefix": "Text(actions.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? localization.chat(\"Your conversations will appear here.\") : localization.chat(",
+        "literal": "\"Try another conversation title.\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "Try another conversation title."
+          ]
+        }
+      },
+      {
+        "prefix": "Text(localization.chat(",
+        "literal": "\"Conversations\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "Conversations"
+          ]
+        }
       },
       {
         "prefix": "TextField(localization.chat(",
@@ -5741,59 +5712,53 @@
         }
       },
       {
-        "prefix": "actions.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? localization.chat(",
-        "literal": "\"No conversations yet\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "No conversations yet"
-          ]
-        }
-      },
-      {
-        "prefix": "actions.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? localization.chat(\"No conversations yet\") : localization.chat(",
-        "literal": "\"No matches\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "No matches"
-          ]
-        }
-      },
-      {
-        "prefix": "description: Text(actions.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? localization.chat(",
-        "literal": "\"Your conversations will appear here.\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Your conversations will appear here."
-          ]
-        }
-      },
-      {
-        "prefix": "description: Text(actions.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? localization.chat(\"Your conversations will appear here.\") : localization.chat(",
-        "literal": "\"Try another conversation title.\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Try another conversation title."
-          ]
-        }
-      },
-      {
         "prefix": "if await store.createConversation() != nil { query =",
         "literal": "\"\"",
         "count": 1,
         "kind": "allowlisted",
         "reason": "R7"
+      },
+      {
+        "kind": "allowlisted",
+        "reason": "R7",
+        "prefix": "if id.rawValue.hasPrefix(",
+        "literal": "\"codex:conversation:\"",
+        "count": 1
+      },
+      {
+        "kind": "allowlisted",
+        "reason": "R7",
+        "prefix": "if id.rawValue.hasPrefix(",
+        "literal": "\"cursor:conversation:\"",
+        "count": 1
+      },
+      {
+        "kind": "allowlisted",
+        "reason": "R7",
+        "prefix": "if id.rawValue.hasPrefix(",
+        "literal": "\"pi:conversation:\"",
+        "count": 1
+      },
+      {
+        "kind": "allowlisted",
+        "reason": "R7",
+        "prefix": "if id.rawValue.hasPrefix(\"codex:conversation:\") { return",
+        "literal": "\"Codex CLI\"",
+        "count": 1
+      },
+      {
+        "kind": "allowlisted",
+        "reason": "R7",
+        "prefix": "if id.rawValue.hasPrefix(\"cursor:conversation:\") { return",
+        "literal": "\"Cursor\"",
+        "count": 1
+      },
+      {
+        "kind": "allowlisted",
+        "reason": "R7",
+        "prefix": "if id.rawValue.hasPrefix(\"pi:conversation:\") { return",
+        "literal": "\"Pi\"",
+        "count": 1
       },
       {
         "prefix": "if let failure = store.lastFailure, failure.operation ==",
@@ -5810,11 +5775,16 @@
         "reason": "R7"
       },
       {
-        "prefix": "if summary.id.rawValue.hasPrefix(",
-        "literal": "\"pi:conversation:\"",
+        "prefix": "store.loadedConversations[summary.id]?.activity.isBusy == true ? localization.chat(",
+        "literal": "\"Response in progress\"",
         "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "Response in progress"
+          ]
+        }
       },
       {
         "prefix": "summary.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? localizer.chat(",
@@ -5829,22 +5799,8 @@
         }
       },
       {
-        "prefix": "systemImage:",
-        "literal": "\"bubble.left\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
         "prefix": "var query =",
         "literal": "\"\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "} else if summary.id.rawValue.hasPrefix(",
-        "literal": "\"cursor:conversation:\"",
         "count": 1,
         "kind": "allowlisted",
         "reason": "R7"
@@ -6723,7 +6679,7 @@
       },
       {
         "prefix": "let name =",
-        "literal": "\"DurableChat.Isolated.Language.\\(UUID())\"",
+        "literal": "\"DurableChat.Isolated.Preferences.\\(UUID())\"",
         "count": 1,
         "kind": "allowlisted",
         "reason": "R8"
@@ -6799,7 +6755,7 @@
         "reason": "R8"
       },
       {
-        "prefix": "self.localization = LocalizationSettings(defaults: defaults, preferredLanguages: { [",
+        "prefix": "else { self.localization = LocalizationSettings(defaults: preferences, preferredLanguages: { [",
         "literal": "\"en\"",
         "count": 1,
         "kind": "allowlisted",
@@ -7041,6 +6997,13 @@
             "Ready. Only an explicit Send starts a model request."
           ]
         }
+      },
+      {
+        "prefix": ".accessibilityIdentifier(",
+        "literal": "\"settings.appearance\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R8"
       }
     ],
     "Sources/DurableChatApp/TestRuntimeFixture.swift": [
@@ -7389,13 +7352,24 @@
         "kind": "allowlisted",
         "reason": "R7"
       }
-    ]
+    ],
+    "Sources/DurableChatApp/NativeAppearanceRoot.swift": []
   },
   "reservedKeys": {
     "Common": {
       "Cancel": "Reusable foundation control; not currently placed by the application.",
       "Close": "Reusable foundation control; not currently placed by the application.",
       "Save": "Reusable foundation control; not currently placed by the application."
+    },
+    "ChatUI": {
+      "Choose and configure a provider when runtime integration is installed.": "Legacy shell label retained for localization compatibility; the shell now delegates to the functional workspace.",
+      "DEMO — read-only sample data": "Legacy shell label retained for localization compatibility; the shell now delegates to the functional workspace.",
+      "No backend connected": "Legacy shell label retained for localization compatibility; the shell now delegates to the functional workspace.",
+      "{conversations}; {messages}.": "Legacy shell label retained for localization compatibility; the shell now delegates to the functional workspace.",
+      "{count} sample conversation": "Legacy shell label retained for localization compatibility; the shell now delegates to the functional workspace.",
+      "{count} sample conversations": "Legacy shell label retained for localization compatibility; the shell now delegates to the functional workspace.",
+      "{count} sample message": "Legacy shell label retained for localization compatibility; the shell now delegates to the functional workspace.",
+      "{count} sample messages": "Legacy shell label retained for localization compatibility; the shell now delegates to the functional workspace."
     }
   },
   "reasons": {

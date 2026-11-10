@@ -10,6 +10,7 @@ import PiDurableKit
 final class AppSession {
     enum Mode { case live, demo, testRuntime }
     let localization: LocalizationSettings
+    let appearance: AppearanceSettings
     let mode: Mode
     private(set) var store: ChatStore?
     let navigation = TranscriptNavigation()
@@ -25,22 +26,29 @@ final class AppSession {
     private let isolatedDirectory: URL?
 
     init(arguments: [String] = ProcessInfo.processInfo.arguments, isolatedDirectory: URL? = nil,
-         localization: LocalizationSettings? = nil) {
+         defaults: UserDefaults? = nil, localization: LocalizationSettings? = nil) {
         self.isolatedDirectory = isolatedDirectory
         mode = arguments.contains("--demo") ? .demo : (arguments.contains("--test-runtime") ? .testRuntime : .live)
-        // Demo/test-runtime never read or write personal language preferences. A suite lives only
-        // for this session; tests may inject their own isolated owner to exercise reopen persistence.
-        if let localization { self.localization = localization }
-        else if mode == .live { self.localization = LocalizationSettings() }
+        // One injected preference domain for independent language/appearance owners. Only production
+        // explicitly chooses standard. Disposable demo/test suites are removed at shutdown; injected
+        // suites remain caller-owned so tests can reopen them and clean them themselves.
+        let preferences: UserDefaults
+        if let defaults { preferences = defaults }
+        else if mode == .live { preferences = .standard }
         else {
-            let name = "DurableChat.Isolated.Language.\(UUID())"
-            let defaults = UserDefaults(suiteName: name)!
+            let name = "DurableChat.Isolated.Preferences.\(UUID())"
+            preferences = UserDefaults(suiteName: name)!
             isolatedDefaultsName = name
-            self.localization = LocalizationSettings(defaults: defaults, preferredLanguages: { ["en"] })
         }
+        preferenceDefaults = preferences
+        appearance = AppearanceSettings(defaults: preferences)
+        if let localization { self.localization = localization }
+        else if mode == .live { self.localization = LocalizationSettings(defaults: preferences) }
+        else { self.localization = LocalizationSettings(defaults: preferences, preferredLanguages: { ["en"] }) }
     }
 
-    @ObservationIgnored private var isolatedDefaultsName: String?
+    @ObservationIgnored private let preferenceDefaults: UserDefaults
+    @ObservationIgnored private(set) var isolatedDefaultsName: String?
 
     /// Lifecycle refresh changes only System; an explicit override stays explicit.
     func refreshSystemLanguage() { localization.refreshSystemLanguage() }
@@ -174,7 +182,7 @@ final class AppSession {
         router = nil; settings = nil
         // Router.shutdown releases its backend owners even though the store can still render history.
         if let testDirectory { try? FileManager.default.removeItem(at: testDirectory) }
-        if let isolatedDefaultsName { UserDefaults(suiteName: isolatedDefaultsName)?.removePersistentDomain(forName: isolatedDefaultsName) }
+        if let isolatedDefaultsName { preferenceDefaults.removePersistentDomain(forName: isolatedDefaultsName) }
     }
 }
 
