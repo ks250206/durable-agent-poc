@@ -1,0 +1,11 @@
+/* 한국어 공통 동작 및 언어 선택 레이블. */
+"Language" = "언어";
+"System" = "시스템 설정 사용";
+"English" = "영어";
+"Japanese" = "일본어";
+"Chinese (Simplified)" = "중국어(간체)";
+"Korean" = "한국어";
+"Cancel" = "취소";
+"Close" = "닫기";
+"Save" = "저장";
+"Reset to System" = "시스템 설정으로 재설정";
