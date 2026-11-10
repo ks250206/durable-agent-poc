@@ -10,6 +10,7 @@ public actor PiProviderSettingsService: ProviderSettingsService {
     private let installationID: UUID?
     private var configurations: [ProviderConfiguration]
     private var loginTask: (id: UUID, task: Task<Void, any Error>)?
+    private var isLoggingOut = false
     private var loginState: AuthenticationState?
     private var observers: [UUID: AsyncStream<Void>.Continuation] = [:]
     private var locked = false
@@ -57,17 +58,23 @@ public actor PiProviderSettingsService: ProviderSettingsService {
                     account = ProviderAccount(option: .apiKey, providerID: provider.id.rawValue)
                 } else { continue }
                 let configuration = configurations.first { $0.account == account } ?? ProviderConfiguration(account: account)
-                let runtimeConfigured = try await models.isConfigured(provider.id)
-                let credential = try await models.credential(for: provider.id)
-                let expectedKind: Credential.Kind = account.option == .chatGPT ? .oauth : .apiKey
-                let configured = runtimeConfigured && credential?.kind == expectedKind
-                let authentication: AuthenticationState
-                if account.option == .chatGPT, let loginState { authentication = loginState }
-                else { authentication = configured ? .configured : (account.option == .chatGPT ? .signedOut : .unconfigured) }
-                let catalog = try await models.models(for: provider.id)
-                result.append(ProviderStatus(configuration: configuration, authentication: authentication, models: catalog.map {
-                    ChatModel(id: ModelSelection(account: account, modelID: $0.modelId), displayName: $0.name)
-                }))
+                do {
+                    let runtimeConfigured = try await models.isConfigured(provider.id)
+                    let credential = try await models.credential(for: provider.id)
+                    let expectedKind: Credential.Kind = account.option == .chatGPT ? .oauth : .apiKey
+                    let configured = runtimeConfigured && credential?.kind == expectedKind
+                    let authentication: AuthenticationState
+                    if account.option == .chatGPT, let loginState { authentication = loginState }
+                    else { authentication = configured ? .configured : (account.option == .chatGPT ? .signedOut : .unconfigured) }
+                    let catalog = try await models.models(for: provider.id)
+                    result.append(ProviderStatus(configuration: configuration, authentication: authentication, models: catalog.map {
+                        ChatModel(id: ModelSelection(account: account, modelID: $0.modelId), displayName: $0.name)
+                    }))
+                } catch {
+                    // A locked/unavailable credential must not hide saved conversations or other accounts.
+                    result.append(ProviderStatus(configuration: configuration,
+                        authentication: .unavailable("This provider's credentials or models could not be loaded.")))
+                }
             }
             return result
         } catch { throw ChatBackendError.unavailable("Provider configuration could not be loaded.") }
@@ -112,7 +119,7 @@ public actor PiProviderSettingsService: ProviderSettingsService {
         do {
             try await validate(account)
             guard account.option == .chatGPT else { throw unsupported }
-            guard loginTask == nil else { throw ChatBackendError.busy }
+            guard loginTask == nil, !isLoggingOut else { throw ChatBackendError.busy }
         } catch { release(); throw error }
         let id = UUID()
         let models = models
@@ -120,7 +127,9 @@ public actor PiProviderSettingsService: ProviderSettingsService {
         let installationID = installationID ?? Models.installationID
         let task = Task {
             try Task.checkCancellation()
-            try await models.login(to: "openai-codex", interaction: await interaction(), installationID: installationID)
+            let loginInteraction = await interaction()
+            try Task.checkCancellation()
+            try await models.login(to: "openai-codex", interaction: loginInteraction, installationID: installationID)
         }
         loginTask = (id, task)
         loginState = .signingIn
@@ -148,26 +157,38 @@ public actor PiProviderSettingsService: ProviderSettingsService {
 
     public func cancelLogin(to account: ProviderAccount) async {
         await acquire()
+        let pending = cancelLoginLocked(to: account)
+        release()
+        // Never await the browser/auth task while holding the settings operation lock.
+        if let pending { _ = await pending.task.result }
+        await acquire()
         defer { release() }
-        await cancelLoginLocked(to: account)
-    }
-
-    private func cancelLoginLocked(to account: ProviderAccount) async {
-        guard account == ProviderAccount(option: .chatGPT, providerID: "openai-codex"), let loginTask else { return }
-        loginTask.task.cancel()
-        _ = await loginTask.task.result
-        if self.loginTask?.id == loginTask.id {
-            self.loginTask = nil
+        if let pending, loginTask?.id == pending.id {
+            loginTask = nil
             loginState = nil
             changed()
         }
     }
 
+    private func cancelLoginLocked(to account: ProviderAccount) -> (id: UUID, task: Task<Void, any Error>)? {
+        guard account == ProviderAccount(option: .chatGPT, providerID: "openai-codex"), let loginTask else { return nil }
+        loginTask.task.cancel()
+        return loginTask
+    }
+
     public func logout(from account: ProviderAccount) async throws {
         await acquire()
-        defer { release() }
-        try await validate(account)
-        await cancelLoginLocked(to: account)
+        do {
+            try await validate(account)
+            guard !isLoggingOut else { throw ChatBackendError.busy }
+        } catch { release(); throw error }
+        isLoggingOut = true
+        let pending = cancelLoginLocked(to: account)
+        release()
+        if let pending { _ = await pending.task.result }
+        await acquire()
+        defer { isLoggingOut = false; release() }
+        // New sign-ins remain blocked until the old task settles and its tokens are removed.
         do { try await models.logout(from: ProviderID(account.providerID)) }
         catch { throw ChatBackendError.unavailable("The credential could not be removed.") }
         if account.option == .chatGPT { loginState = nil }

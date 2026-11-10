@@ -26,6 +26,7 @@ public actor PiChatBackend: ChatBackend {
     private var settingsWatcher: Task<Void, Never>?
     private var subscribers: [UUID: AsyncThrowingStream<ChatEvent, any Error>.Continuation] = [:]
     private var closed = false
+    private var observationHasFailed = false
     private var locked = false
     private var waiters: [CheckedContinuation<Void, Never>] = []
 
@@ -161,6 +162,10 @@ public actor PiChatBackend: ChatBackend {
             }
             // Retries acknowledge the original durable submission even if busy or credentials were removed.
             if existing != nil {
+                let metadata = try await conversation.document(Self.metadata)
+                guard metadata.accepted.first(where: { $0.id == request.messageID })?.text == request.text else {
+                    throw ChatBackendError.unavailable("This message ID already identifies a different submission.")
+                }
                 try await refresh(request.conversationID)
                 if let snapshot = state.loadedConversations.first(where: { $0.id == request.conversationID }) {
                     publish(.conversationUpdated(snapshot))
@@ -284,7 +289,7 @@ public actor PiChatBackend: ChatBackend {
     private func settingsChanged() async {
         await acquire()
         defer { release() }
-        guard !closed else { return }
+        guard !closed, !observationHasFailed else { return }
         do {
             let connection = state.connection
             try await refreshConnection()
@@ -299,6 +304,7 @@ public actor PiChatBackend: ChatBackend {
         if !closed { failObservation() }
     }
     private func failObservation() {
+        observationHasFailed = true
         state.connection = .failed("The runtime could not refresh its saved state. Close and reopen it.")
         publish(.snapshot(state))
     }

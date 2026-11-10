@@ -3,6 +3,7 @@ import ChatCore
 import Foundation
 import PiDurableKit
 import Testing
+import os
 
 @Suite(.serialized) struct PiProviderSettingsTests {
     private let api = ProviderAccount(option: .apiKey, providerID: "openai")
@@ -12,6 +13,76 @@ import Testing
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("DurableChat-settings-\(UUID())")
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
+    }
+
+    @Test func credentialReadFailureDoesNotHideSavedConversations() async throws {
+        let directory = try directory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let credentials = FailingPiCredentials()
+        let models = piTestModels(credentials: credentials)
+        let faux = FauxProvider()
+        try await models.register(faux)
+        let service = try PiProviderSettingsService(models: models, preferencesURL: directory.appendingPathComponent("providers.json"))
+        let account = ProviderAccount(option: .apiKey, providerID: "faux")
+        try await service.setAPIKey("isolated-key", for: account)
+        let database = directory.appendingPathComponent("history.sqlite")
+        let backend = try await PiChatBackend.open(settings: service, databaseURL: database)
+        let id = try await backend.createConversation(title: "Keep my history")
+        try await faux.append(.text("Persisted answer"))
+        try await backend.send(SendRequest(conversationID: id, text: "Saved question", model: ModelSelection(account: account, modelID: "faux-1")))
+        let expected = try await piWait(backend, id: id) { $0.activity == .idle && $0.messages.last?.content == "Persisted answer" }
+        try await backend.close()
+        await credentials.failReads()
+        let status = try #require(try await service.snapshot().first)
+        if case .unavailable = status.authentication {} else { Issue.record("Expected isolated credential failure") }
+        let reopened = try await PiChatBackend.open(settings: service, databaseURL: database)
+        let state = try await reopened.snapshot()
+        #expect(state.connection == .disconnected)
+        #expect(state.loadedConversations.first { $0.id == id } == expected)
+        try await reopened.close()
+    }
+
+    @Test func slowLoginCancellationDoesNotHoldSettingsOrBackendLocks() async throws {
+        let directory = try directory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let models = piTestModels()
+        try await models.register(CustomProvider(id: "openai-codex", baseURL: URL(string: "https://isolated.invalid/v1")!,
+            oauth: .init(signIn: .browser(authorizationURL: URL(string: "https://isolated.invalid/authorize")!,
+                redirectURI: URL(string: "http://127.0.0.1:59173/callback")!),
+                tokenURL: URL(string: "https://isolated.invalid/token")!, clientID: "isolated-client"),
+            models: [.init(id: "isolated-model")]))
+        let gate = PiLoginGate()
+        let cancelled = OSAllocatedUnfairLock(initialState: false)
+        let (entered, signal) = AsyncStream<Void>.makeStream()
+        let service = try PiProviderSettingsService(models: models, preferencesURL: directory.appendingPathComponent("providers.json"), installationID: UUID(), loginInteraction: {
+            signal.yield(())
+            await withTaskCancellationHandler { await gate.wait() } onCancel: { cancelled.withLock { $0 = true } }
+            return LoginInteraction(presentSignInPage: { _ in throw CancellationError() })
+        })
+        let backend = try await PiChatBackend.open(settings: service, databaseURL: directory.appendingPathComponent("runtime.sqlite"))
+        let id = try await backend.createConversation(title: "Still responsive")
+        let login = Task { try await service.login(to: chatGPT) }
+        var entering = entered.makeAsyncIterator()
+        _ = await entering.next()
+        let cancelling = Task { await service.cancelLogin(to: chatGPT) }
+        let deadline = ContinuousClock.now + .seconds(2)
+        while !cancelled.withLock({ $0 }), ContinuousClock.now < deadline { await Task.yield() }
+        #expect(cancelled.withLock { $0 })
+        let responsive = OSAllocatedUnfairLock(initialState: false)
+        let checking = Task {
+            _ = try await service.snapshot()
+            try await backend.selectConversation(id)
+            try await backend.stop(conversationID: id)
+            responsive.withLock { $0 = true }
+        }
+        let responseDeadline = ContinuousClock.now + .seconds(2)
+        while !responsive.withLock({ $0 }), ContinuousClock.now < responseDeadline { await Task.yield() }
+        #expect(responsive.withLock { $0 }) // Must finish BEFORE the authentication task can unwind.
+        await gate.release()
+        _ = await checking.result
+        await cancelling.value
+        _ = await login.result
+        try await backend.close()
     }
 
     @Test func discoversModelsAndActualCredentialStateWithSeparateRoutes() async throws {
@@ -155,4 +226,27 @@ import Testing
         #expect(try await service.snapshot().first?.authentication == .signedOut)
         #expect(PiDenyNetwork.requestCount == 0)
     }
+}
+
+private actor FailingPiCredentials: CredentialStore {
+    private let backing = InMemoryCredentialStore()
+    private var failing = false
+    func failReads() { failing = true }
+    func credential(for provider: ProviderID) async throws -> Credential? {
+        if failing { throw ChatBackendError.unavailable("synthetic Keychain error") }
+        return await backing.credential(for: provider)
+    }
+    func setCredential(_ credential: Credential?, for provider: ProviderID) async throws {
+        await backing.setCredential(credential, for: provider)
+    }
+    func providers() async throws -> [ProviderID] { await backing.providers() }
+}
+private actor PiLoginGate {
+    private var waiter: CheckedContinuation<Void, Never>?
+    private var released = false
+    func wait() async {
+        if released { return }
+        await withCheckedContinuation { waiter = $0 }
+    }
+    func release() { released = true; waiter?.resume(); waiter = nil }
 }

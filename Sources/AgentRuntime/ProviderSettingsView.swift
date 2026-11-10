@@ -12,6 +12,7 @@ public struct ProviderSettingsView: View {
     private let onSelection: @MainActor (ModelSelection?) -> Void
     @PiStoredState<[ProviderStatus]> private var statuses: [ProviderStatus] = []
     @PiStoredState<ProviderAccount?> private var account: ProviderAccount?
+    @PiStoredState<ProviderAccount?> private var activeAccount: ProviderAccount?
     @PiStoredState<String> private var apiKey = ""
     @PiStoredState<String?> private var failure: String?
     @PiStoredState<Bool> private var working = false
@@ -23,6 +24,7 @@ public struct ProviderSettingsView: View {
         self.service = service
         self.onSelection = onSelection
         _account = PiStoredState(initialValue: initialAccount)
+        _activeAccount = PiStoredState(initialValue: initialAccount)
     }
 
     public var body: some View {
@@ -79,6 +81,11 @@ public struct ProviderSettingsView: View {
                             Text(model.displayName).tag(Optional(model.id.modelID))
                         }
                     }.disabled(working || signingIn != nil)
+                    Button("Use selected model") {
+                        activeAccount = account
+                        publishSelection()
+                    }.disabled(working || signingIn != nil || status.authentication != .configured
+                               || status.configuration.selectedModelID == nil)
                     if status.models.isEmpty {
                         Text("This provider has no available models.").foregroundStyle(.secondary)
                     }
@@ -95,7 +102,6 @@ public struct ProviderSettingsView: View {
         .onChange(of: account) { _, _ in
             apiKey = ""
             failure = nil
-            publishSelection()
         }
         .onDisappear {
             apiKey = ""
@@ -115,7 +121,9 @@ public struct ProviderSettingsView: View {
         }
     }
     private func publishSelection() {
-        guard let current, current.authentication == .configured,
+        guard let activeAccount else { return }
+        let active = statuses.first { $0.configuration.account == activeAccount }
+        guard let current = active, current.authentication == .configured,
               let modelID = current.configuration.selectedModelID,
               current.models.contains(where: { $0.id.modelID == modelID }) else {
             onSelection(nil)

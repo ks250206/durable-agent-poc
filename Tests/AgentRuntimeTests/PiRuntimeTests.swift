@@ -75,6 +75,10 @@ import os
             await #expect(throws: ChatBackendError.busy) {
                 try await backend.send(SendRequest(conversationID: id, text: "Duplicate click", model: fixture.selection))
             }
+            await #expect(throws: ChatBackendError.self) {
+                try await backend.send(SendRequest(conversationID: id, messageID: request.messageID,
+                    text: "Different text must not reuse an accepted ID", model: fixture.selection))
+            }
             try await backend.send(request) // same client ID acknowledges its original submission while busy
             #expect(try await backend.snapshot().loadedConversations.first?.messages.filter { $0.role == .user }.count == 1)
             try await backend.stop(conversationID: id)

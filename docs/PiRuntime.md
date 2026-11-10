@@ -31,7 +31,7 @@ which imports SwiftUI; ChatUI does not depend on AgentRuntime.
 No provider or model is chosen implicitly. The settings view starts with the supplied
 account (or an explicit “Choose a provider” item), persists each provider's selected
 model with `update`, and calls `onSelection` with a configured, catalog-valid selection,
-or nil. The caller owns the active account across settings-window lifetimes.
+or nil. The caller owns the active account across settings-window lifetimes. Browsing another account does not change it; the explicit Use selected model button applies the choice.
 For a headless integration, read `snapshot()`, choose a `ProviderStatus`, persist
 `ProviderConfiguration(account:selectedModelID:)`, and copy its explicit `ModelSelection`
 into `ChatStore.modelSelection`. Setting a model does not authenticate or send anything.
@@ -49,7 +49,8 @@ Production defaults:
   uses a dedicated Runtime with console logging discarded. No catalog HTTP refresh runs.
 
 Keep one backend owner per database URL. Await `close()` before reopening the file;
-releasing a Swift reference is not a shutdown operation. Close stops observations,
+releasing a Swift reference is not a shutdown operation. Credential/model lookup failures are isolated to the provider status; they do not prevent saved history from opening.
+Close stops observations,
 aborts each conversation, preserves committed partial output as stopped, finishes event
 subscribers, and closes the harness/storage. It is idempotent. An abort/read failure
 still attempts harness close and reports a sanitized error.
@@ -66,7 +67,7 @@ Conversation IDs are `pi:conversation:<durable ID>`. User IDs are the exact clie
 idempotency. A candidate user input is recorded in an app document before submit;
 it is restored only when Pi has the matching committed submission. Thus a crash before
 admission cannot invent an accepted message, and aborting an accepted inbox input does
-not erase it. Its text/date also survive retries. Reusing a key acknowledges its original
+not erase it. Its text/date also survive retries; reusing an accepted ID with different text is rejected. Reusing a key acknowledges its original
 submission and never queues a second generation; keys must identify the same submission.
 
 Assistant IDs are `pi:reply:<client user ID>:<reply ordinal>`, shared between committed
@@ -93,7 +94,7 @@ extensions, shell tools, or file tools are granted to the agent.
 injected interaction factory. Subscription authentication requires real user interaction
 in the secure browser session. The view owns the login Task; dismissal, task cancellation,
 and `cancelLogin` cancel Pi's operation and dismiss authentication. Logout waits for login
-cancellation before removing that route's credential. API-key and subscription slots
+cancellation before removing that route's credential, without holding the settings operation lock. New sign-ins remain blocked until logout finishes. API-key and subscription slots
 remain separate. Nonsecret selected models persist after logout, but the callback returns
 nil until configured again. Raw keys/tokens, OAuth URLs/codes, and upstream error detail
 never enter settings/chat snapshots, app preferences, or app logging callbacks. UI errors

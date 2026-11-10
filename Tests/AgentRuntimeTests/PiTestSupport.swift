@@ -18,11 +18,11 @@ final class PiDenyNetwork: URLProtocol, @unchecked Sendable {
     override func stopLoading() {}
 }
 
-func piTestModels(builtinProviders: Bool = false) -> Models {
+func piTestModels(builtinProviders: Bool = false, credentials: any CredentialStore = InMemoryCredentialStore()) -> Models {
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [PiDenyNetwork.self]
     let runtime = Runtime(configuration: .init(urlSessionConfiguration: configuration, log: { _, _ in }))
-    return Models(credentials: InMemoryCredentialStore(), builtinProviders: builtinProviders, catalog: nil, runtime: runtime)
+    return Models(credentials: credentials, builtinProviders: builtinProviders, catalog: nil, runtime: runtime)
 }
 
 struct PiFixture: Sendable {
