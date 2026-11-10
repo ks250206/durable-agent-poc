@@ -1,12 +1,14 @@
 import AppKit
+import AppLocalization
 import ChatCore
+@testable import ChatUI
 import SwiftUI
 import Testing
-@testable import ChatUI
 
 // These are AppKit synthetic input tests. They do not certify a physical Japanese input source,
 // candidate-window navigation, Live Conversion, or hardware key/focus timing in a running app.
-@Suite(.serialized) @MainActor
+extension NativeUITests {
+@Suite @MainActor
 struct CompositionTests {
     private func key(_ flags: NSEvent.ModifierFlags = [], repeat repeating: Bool = false,
                      code: UInt16 = 36) -> NSEvent {
@@ -177,7 +179,7 @@ struct CompositionTests {
         defer { observation.cancel() }
         store.modelSelection = composerModel
         await eventually { store.canSend }
-        let host = NSHostingView(rootView: ComposerView(store: store))
+        let host = NSHostingView(rootView: ComposerView(store: store).environment(\.locale, Locale(identifier: "en")))
         let window = window(containing: host)
         defer { window.close() }
         await eventually { findEditor(host) != nil }
@@ -196,7 +198,7 @@ struct CompositionTests {
         undo.undo()
         await eventually { store.draft == "Hello 日本語" }
         #expect(editor.string == store.draft)
-        host.rootView = ComposerView(store: store)
+        host.rootView = ComposerView(store: store).environment(\.locale, Locale(identifier: "en"))
         host.layoutSubtreeIfNeeded()
         #expect(editor.string == "Hello 日本語")
         undo.redo()
@@ -384,7 +386,7 @@ struct CompositionTests {
         store.modelSelection = composerModel
         store.draft = "prefix "
         await eventually { store.canSend }
-        let host = NSHostingView(rootView: ComposerView(store: store))
+        let host = NSHostingView(rootView: ComposerView(store: store).environment(\.locale, Locale(identifier: "en")))
         let window = window(containing: host)
         defer { window.close() }
         await eventually { findEditor(host) != nil }
@@ -402,7 +404,7 @@ struct CompositionTests {
             await backend.stream(chunk)
             await eventually { store.messages.last?.content == chunk }
             // Rebuild the real representable with the same view identity while AppKit owns preedit.
-            host.rootView = ComposerView(store: store)
+            host.rootView = ComposerView(store: store).environment(\.locale, Locale(identifier: "en"))
             host.layoutSubtreeIfNeeded()
             #expect(findEditor(host) === editor)
             #expect(editor.string == "prefix 日本")
@@ -428,6 +430,8 @@ struct CompositionTests {
     }
 }
 
+}
+
 @MainActor
 private final class OrderedInputTextView: CompositionNSTextView {
     var inputCallbacks: ((CompositionNSTextView) -> Void)?
@@ -445,8 +449,10 @@ private func findEditor(_ view: NSView) -> CompositionNSTextView? {
 @MainActor
 private func eventually(_ condition: @MainActor () async -> Bool,
                         sourceLocation: SourceLocation = #_sourceLocation) async {
-    let deadline = ContinuousClock.now + .seconds(3)
-    while !(await condition()), ContinuousClock.now < deadline { await Task.yield() }
+    let deadline = ContinuousClock.now + .seconds(10)
+    while !(await condition()), ContinuousClock.now < deadline {
+        try? await Task.sleep(for: .milliseconds(10)) // Let AppKit and SwiftUI service the run loop.
+    }
     #expect(await condition(), sourceLocation: sourceLocation)
 }
 

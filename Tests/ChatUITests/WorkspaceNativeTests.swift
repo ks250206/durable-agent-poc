@@ -1,4 +1,5 @@
 import AppKit
+import AppLocalization
 import ChatCore
 @testable import ChatUI
 import SwiftUI
@@ -78,7 +79,7 @@ private final class HostedWorkspace {
 
     init<V: View>(_ view: V, width: CGFloat, height: CGFloat = 720) {
         _ = NSApplication.shared
-        host = NSHostingView(rootView: AnyView(view))
+        host = NSHostingView(rootView: AnyView(view.environment(\.locale, Locale(identifier: "en"))))
         host.sizingOptions = []
         window = NSWindow(contentRect: NSRect(x: -16000, y: -16000, width: width, height: height),
                           styleMask: [.borderless], backing: .buffered, defer: false)
@@ -114,12 +115,13 @@ private final class HostedWorkspace {
 
 @MainActor
 private func eventually(_ condition: () -> Bool, sourceLocation: SourceLocation = #_sourceLocation) async throws {
-    let deadline = ContinuousClock.now + .seconds(4)
+    let deadline = ContinuousClock.now + .seconds(10)
     while !condition(), ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(20)) }
-    #expect(condition(), sourceLocation: sourceLocation)
+    try #require(condition(), sourceLocation: sourceLocation)
 }
 
-@Suite(.serialized)
+extension NativeUITests {
+@Suite
 @MainActor
 struct WorkspaceNativeTests {
     @Test func streamingFollowsLatestUntilNativeScrollMovesUp() async throws {
@@ -284,4 +286,6 @@ struct WorkspaceNativeTests {
             }
         }
     }
+}
+
 }

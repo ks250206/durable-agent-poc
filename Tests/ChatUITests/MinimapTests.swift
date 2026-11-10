@@ -1,4 +1,5 @@
 import AppKit
+import AppLocalization
 import ChatCore
 import SwiftUI
 import Testing
@@ -97,7 +98,8 @@ private func minimapMessages(_ count: Int, conversation: ConversationID = Conver
 
 /// AppKit tests are serialized because NSApplication and the key-view loop are process-global.
 /// Events travel through a real NSWindow to the same NSViewRepresentable input surface used by Canvas.
-@Suite(.serialized) @MainActor
+extension NativeUITests {
+@Suite @MainActor
 struct MinimapNativeHostTests {
     @Test func workspaceSlotUsesRealTranscriptViewportAndStableIDJumps() async throws {
         _ = NSApplication.shared
@@ -111,7 +113,7 @@ struct MinimapNativeHostTests {
             store: store, navigation: navigation, composer: { _ in EmptyView() },
             minimap: { store, navigation in ConversationMinimap(store: store, navigation: navigation) }
         )
-        let host = NSHostingView(rootView: workspace)
+        let host = NSHostingView(rootView: workspace.environment(\.locale, Locale(identifier: "en")))
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1280, height: 760), styleMask: [.titled], backing: .buffered,
             defer: false)
@@ -228,7 +230,7 @@ struct MinimapNativeHostTests {
             contentRect: NSRect(x: 0, y: 0, width: 180, height: 700), styleMask: [.titled, .resizable],
             backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
-        let host = NSHostingView(rootView: ConversationMinimap(store: store, navigation: navigation))
+        let host = NSHostingView(rootView: ConversationMinimap(store: store, navigation: navigation).environment(\.locale, Locale(identifier: "en")))
         window.contentView = host
         defer { window.close() }
         window.makeKeyAndOrderFront(nil)
@@ -310,7 +312,7 @@ struct MinimapNativeHostTests {
     private func settle(_ predicate: @MainActor () -> Bool, sourceLocation: SourceLocation = #_sourceLocation)
         async throws
     {
-        for _ in 0..<200 {
+        for _ in 0..<1000 {
             if predicate() { return }
             // Service SwiftUI/AppKit layout and Observation callbacks, not just Swift tasks.
             pumpRunLoop()
@@ -351,6 +353,8 @@ struct MinimapNativeHostTests {
         if let field = view as? NSTextField, field.isEditable { return field }
         return view.subviews.lazy.compactMap { findTextField(in: $0) }.first
     }
+
+}
 
 }
 

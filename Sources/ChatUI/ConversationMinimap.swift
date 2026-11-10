@@ -1,4 +1,5 @@
 import AppKit
+import AppLocalization
 import ChatCore
 import SwiftUI
 
@@ -10,6 +11,7 @@ private typealias MinimapState<Value> = SwiftUI.State<Value>
 /// The transcript owns geometry: the solid viewport always uses `navigation.viewport`.
 @MainActor
 public struct ConversationMinimap: View {
+    @ChatLocalization private var localization
     private let store: ChatStore
     private let navigation: TranscriptNavigation
 
@@ -24,8 +26,8 @@ public struct ConversationMinimap: View {
         MinimapContent(
             messages: messages, layout: layout,
             emptyText: store.selectedConversationID == nil
-                ? "Select a conversation"
-                : (store.selectedConversation == nil ? "Loading messages…" : "No messages yet"),
+                ? localization.chat("Select a conversation")
+                : (store.selectedConversation == nil ? localization.chat("Loading messages…") : localization.chat("No messages yet")),
             navigation: navigation
         )
         .id(store.selectedConversationID)
@@ -42,6 +44,7 @@ public struct ConversationMinimap: View {
 
 @MainActor
 private struct MinimapContent: View {
+    @ChatLocalization private var localization
     let messages: [ChatMessage]
     let layout: MinimapLayout
     let emptyText: String
@@ -60,22 +63,20 @@ private struct MinimapContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 4) {
-                Text("Conversation map").font(.headline).lineLimit(1).minimumScaleFactor(0.7)
+                Text(localization.chat("Conversation map")).font(.headline).lineLimit(1).minimumScaleFactor(0.7)
                 Spacer(minLength: 0)
                 Button {
                     showsHelp.toggle()
                 } label: {
                     Image(systemName: "questionmark.circle")
                 }
-                .buttonStyle(.plain).accessibilityLabel("Conversation map help")
+                .buttonStyle(.plain).accessibilityLabel(localization.chat("Conversation map help"))
                 .popover(isPresented: $showsHelp) {
-                    Text(
-                        "Every message is included, from top (oldest) to bottom (newest). The four lanes show System, User, Assistant, and Tool messages. Height and width encode compressed UTF-8 text length, not measured transcript height. Very dense messages occupy subpixels.\n\nThe outlined band is the transcript’s visible range. The dotted line is the keyboard target; it can differ while a jump is pending. Click to jump. Up/Down, Page Up/Down, and Home/End jump through messages. Return or Space repeats a jump. Tab leaves the map. Open All messages for an accessible list and exact message-number navigation."
-                    )
+                    Text(verbatim: localization.chat("Every message is included, from top (oldest) to bottom (newest). The four lanes show System, User, Assistant, and Tool messages. Height and width encode compressed UTF-8 text length, not measured transcript height. Very dense messages occupy subpixels.\n\nThe outlined band is the transcript’s visible range. The dotted line is the keyboard target; it can differ while a jump is pending. Click to jump. Up/Down, Page Up/Down, and Home/End jump through messages. Return or Space repeats a jump. Tab leaves the map. Open All messages for an accessible list and exact message-number navigation."))
                     .font(.callout).padding().frame(width: 300)
                 }
             }
-            Text("\(messages.count.formatted()) messages · entire history")
+            Text(verbatim: localization.chatCount(messages.count, one: "{count} message · entire history", other: "{count} messages · entire history"))
                 .font(.caption).foregroundStyle(.secondary).lineLimit(2)
             LazyVGrid(
                 columns: [
@@ -86,7 +87,7 @@ private struct MinimapContent: View {
                 ForEach(MessageRole.allCases, id: \.self) { role in
                     HStack(spacing: 4) {
                         Circle().fill(role.minimapColor).frame(width: 6, height: 6)
-                        Text(role.minimapName).lineLimit(1).minimumScaleFactor(0.6)
+                        Text(verbatim: localization.role(role)).lineLimit(1).minimumScaleFactor(0.6)
                     }
                     .font(.caption2)
                 }
@@ -106,12 +107,12 @@ private struct MinimapContent: View {
             Button {
                 showsMessages = true
             } label: {
-                Label("All messages…", systemImage: "list.bullet")
+                Label(localization.chat("All messages…"), systemImage: "list.bullet")
                     .font(.caption).lineLimit(1).minimumScaleFactor(0.6)
                     .frame(maxWidth: .infinity)
             }
             .disabled(messages.isEmpty)
-            .help("Browse every message or jump to an exact message number")
+            .help(localization.chat("Browse every message or jump to an exact message number"))
         }
         .padding(10)
         .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
@@ -126,8 +127,11 @@ private struct MinimapContent: View {
     }
 
     private var viewportDescription: String {
-        guard let range = layout.visibleIndices(navigation.viewport) else { return "Visible range unavailable" }
-        return "Viewing \(range.lowerBound + 1)–\(range.upperBound + 1) of \(messages.count)"
+        guard let range = layout.visibleIndices(navigation.viewport) else { return localization.chat("Visible range unavailable") }
+        return localization.chat("Viewing {first}–{last} of {total}", [
+            "first": .integer(range.lowerBound + 1), "last": .integer(range.upperBound + 1),
+            "total": .integer(messages.count),
+        ])
     }
 
     private var preview: some View {
@@ -136,14 +140,17 @@ private struct MinimapContent: View {
                 let message = messages[index]
                 VStack(alignment: .leading, spacing: 2) {
                     Text(
-                        "\(index + 1) · \(message.role.minimapName)\(message.status == .streaming ? " · streaming" : "")"
+                        localization.chat("{number} · {role} · {status}", [
+                            "number": .integer(index + 1), "role": .string(localization.role(message.role)),
+                            "status": .string(localization.status(message.status)),
+                        ])
                     )
                     .font(.caption.weight(.semibold)).lineLimit(1)
-                    Text(message.content.isEmpty ? "Empty message" : String(message.content.prefix(160)))
+                    Text(message.content.isEmpty ? localization.chat("Empty message") : String(message.content.prefix(160)))
                         .font(.caption2).foregroundStyle(.secondary).lineLimit(2)
                 }
             } else {
-                Text("Hover to preview. Click to jump.\n↑ ↓ navigate · Home / End")
+                Text(localization.chat("Hover to preview. Click to jump.\n↑ ↓ navigate · Home / End"))
                     .font(.caption2).foregroundStyle(.secondary)
             }
         }
@@ -203,7 +210,6 @@ private struct MinimapContent: View {
 }
 
 extension MessageRole {
-    fileprivate var minimapName: String { rawValue.capitalized }
     fileprivate var minimapColor: Color {
         switch self {
         case .system: .secondary
@@ -218,6 +224,7 @@ extension MessageRole {
 /// per-message elements without constructing thousands of SwiftUI controls over the Canvas.
 @MainActor
 private struct MinimapInputSurface: NSViewRepresentable {
+    @ChatLocalization private var localization
     let layout: MinimapLayout
     let navigation: TranscriptNavigation
     let activeID: MessageID?
@@ -229,6 +236,7 @@ private struct MinimapInputSurface: NSViewRepresentable {
     func makeNSView(context: Context) -> MinimapInputView { MinimapInputView() }
 
     func updateNSView(_ view: MinimapInputView, context: Context) {
+        view.localizer = localization
         view.layout = layout
         view.navigation = navigation
         view.activeID = activeID
@@ -242,6 +250,7 @@ private struct MinimapInputSurface: NSViewRepresentable {
 
 @MainActor
 final class MinimapInputView: NSView {
+    var localizer = Localizer(language: .english)
     var layout = MinimapLayout(messages: [])
     var navigation: TranscriptNavigation?
     var activeID: MessageID?
@@ -260,11 +269,8 @@ final class MinimapInputView: NSView {
         super.init(frame: frame)
         setAccessibilityElement(true)
         setAccessibilityRole(.slider)
-        setAccessibilityLabel("Conversation map")
         setAccessibilityIdentifier("minimap.navigation")
-        setAccessibilityHelp(
-            "Up and Down navigate every message. Home and End jump to the ends. Return repeats a jump. Use All messages for individual messages and exact message numbers."
-        )
+        updateAccessibility()
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -357,13 +363,19 @@ final class MinimapInputView: NSView {
     }
 
     func updateAccessibility() {
+        setAccessibilityLabel(localizer.chat("Conversation map"))
+        setAccessibilityHelp(localizer.chat("Up and Down navigate every message. Home and End jump to the ends. Return repeats a jump. Use All messages for individual messages and exact message numbers."))
         if let index = layout.index(for: activeID) ?? layout.index(for: navigation?.viewport.firstVisibleMessageID) {
             let node = layout.nodes[index]
             setAccessibilityValue(
-                "Message \(index + 1) of \(layout.nodes.count), \(node.role.rawValue), \(node.byteCount) UTF-8 bytes, \(node.status.rawValue)"
+                localizer.chat("Message {current} of {total}, {role}, {bytes} UTF-8 bytes, {status}", [
+                    "current": .integer(index + 1), "total": .integer(layout.nodes.count),
+                    "role": .string(localizer.role(node.role)), "bytes": .integer(node.byteCount),
+                    "status": .string(localizer.status(node.status)),
+                ])
             )
         } else {
-            setAccessibilityValue("\(layout.nodes.count) messages. Visible range unavailable.")
+            setAccessibilityValue(localizer.chatCount(layout.nodes.count, one: "{count} message. Visible range unavailable.", other: "{count} messages. Visible range unavailable."))
         }
     }
 
@@ -390,6 +402,7 @@ final class MinimapInputView: NSView {
 
 @MainActor
 private struct MinimapMessageList: View {
+    @ChatLocalization private var localization
     let messages: [ChatMessage]
     let navigation: TranscriptNavigation
     @Environment(\.dismiss) private var dismiss
@@ -403,15 +416,15 @@ private struct MinimapMessageList: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("All \(messages.count.formatted()) messages").font(.headline)
+                Text(verbatim: localization.chatCount(messages.count, one: "{count} message in total", other: "All {count} messages")).font(.headline)
                 Spacer()
-                Button("Done") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button(localization.chat("Done")) { dismiss() }.keyboardShortcut(.cancelAction)
             }
             HStack {
-                TextField("Message number (1–\(messages.count))", text: $messageNumber)
-                    .accessibilityLabel("Message number")
+                TextField(localization.chat("Message number (1–{count})", ["count": .integer(messages.count)]), text: $messageNumber)
+                    .accessibilityLabel(localization.chat("Message number"))
                     .onSubmit { if let index = targetIndex { jump(index) } }
-                Button("Go") { if let index = targetIndex { jump(index) } }
+                Button(localization.chat("Go")) { if let index = targetIndex { jump(index) } }
                     .disabled(targetIndex == nil)
             }
             ScrollViewReader { proxy in
@@ -423,17 +436,26 @@ private struct MinimapMessageList: View {
                     } label: {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(
-                                "\(index + 1) · \(message.role.minimapName) · \(message.content.utf8.count) bytes · \(message.status.rawValue)"
+                                localization.chat("{number} · {role} · {bytes} bytes · {status}", [
+                                    "number": .integer(index + 1), "role": .string(localization.role(message.role)),
+                                    "bytes": .integer(message.content.utf8.count),
+                                    "status": .string(localization.status(message.status)),
+                                ])
                             )
                             .font(.caption.weight(.semibold))
-                            Text(message.content.isEmpty ? "Empty message" : String(message.content.prefix(180)))
+                            Text(message.content.isEmpty ? localization.chat("Empty message") : String(message.content.prefix(180)))
                                 .lineLimit(2).font(.callout).foregroundStyle(.secondary)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(
-                        "Message \(index + 1), \(message.role.minimapName), \(message.content.utf8.count) UTF-8 bytes, \(message.status.rawValue). \(message.content.prefix(180))"
+                        localization.chat("Message {number}, {role}, {bytes} UTF-8 bytes, {status}. {preview}", [
+                            "number": .integer(index + 1), "role": .string(localization.role(message.role)),
+                            "bytes": .integer(message.content.utf8.count),
+                            "status": .string(localization.status(message.status)),
+                            "preview": .string(String(message.content.prefix(180))),
+                        ])
                     )
                 }
                 .onAppear {

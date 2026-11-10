@@ -1,3 +1,4 @@
+import AppLocalization
 import ChatCore
 import Observation
 import SwiftUI
@@ -6,17 +7,17 @@ private typealias StoredState<Value> = SwiftUI.State<Value>
 
 /// Searches titles without reordering the backend's authoritative conversation list.
 enum ConversationFilter {
-    static func matching(_ conversations: [ConversationSummary], query: String) -> [ConversationSummary] {
+    static func matching(_ conversations: [ConversationSummary], query: String, localizer: Localizer = Localizer(language: .english)) -> [ConversationSummary] {
         let terms = query.split(whereSeparator: { $0.isWhitespace }).map(String.init)
         return conversations.filter { conversation in
             terms.allSatisfy { term in
-                title(conversation).range(of: term, options: [.caseInsensitive, .diacriticInsensitive], locale: .current) != nil
+                title(conversation, localizer: localizer).range(of: term, options: [.caseInsensitive, .diacriticInsensitive], locale: localizer.locale) != nil
             }
         }
     }
 
-    static func title(_ summary: ConversationSummary) -> String {
-        summary.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Untitled conversation" : summary.title
+    static func title(_ summary: ConversationSummary, localizer: Localizer = Localizer(language: .english)) -> String {
+        summary.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? localizer.chat("Untitled conversation") : summary.title
     }
 }
 
@@ -50,6 +51,7 @@ final class ConversationSidebarActions {
 
 @MainActor
 public struct ConversationSidebar: View {
+    @ChatLocalization private var localization
     private let store: ChatStore
     private let onSelection: () -> Void
     @StoredState private var actions: ConversationSidebarActions
@@ -60,7 +62,7 @@ public struct ConversationSidebar: View {
         _actions = StoredState(initialValue: ConversationSidebarActions(store: store))
     }
 
-    private var filtered: [ConversationSummary] { actions.filtered }
+    private var filtered: [ConversationSummary] { ConversationFilter.matching(store.conversations, query: actions.query, localizer: localization) }
 
     public var body: some View {
         @Bindable var actions = actions
@@ -75,22 +77,22 @@ public struct ConversationSidebar: View {
             Button {
                 Task { await actions.create() }
             } label: {
-                Label(actions.isCreating ? "Creating…" : "New conversation", systemImage: "square.and.pencil")
+                Label(actions.isCreating ? localization.chat("Creating…") : localization.chat("New conversation"), systemImage: "square.and.pencil")
                     .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 4)
             }
             .disabled(!store.connection.canSend || actions.isBusy)
             .keyboardShortcut("n", modifiers: .command)
-            .accessibilityLabel("New conversation")
-            .help("Create and select a new conversation")
+            .accessibilityLabel(localization.chat("New conversation"))
+            .help(localization.chat("Create and select a new conversation"))
             .padding(.horizontal, 12)
 
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary).accessibilityHidden(true)
-                TextField("Search conversations", text: $actions.query)
-                    .textFieldStyle(.plain).accessibilityLabel("Search conversations")
+                TextField(localization.chat("Search conversations"), text: $actions.query)
+                    .textFieldStyle(.plain).accessibilityLabel(localization.chat("Search conversations"))
                 if !actions.query.isEmpty {
                     Button { actions.query = "" } label: { Image(systemName: "xmark.circle.fill") }
-                        .buttonStyle(.plain).foregroundStyle(.secondary).accessibilityLabel("Clear conversation search")
+                        .buttonStyle(.plain).foregroundStyle(.secondary).accessibilityLabel(localization.chat("Clear conversation search"))
                 }
             }
             .padding(8).background(ChatTheme.inset, in: RoundedRectangle(cornerRadius: 8))
@@ -98,18 +100,18 @@ public struct ConversationSidebar: View {
 
             if let failure = store.lastFailure, failure.operation == "select" {
                 HStack(alignment: .top) {
-                    Label(failure.message, systemImage: "exclamationmark.triangle")
+                    Label(localization.diagnostic(failure.message), systemImage: "exclamationmark.triangle")
                         .fixedSize(horizontal: false, vertical: true)
                     Button { store.clearFailure() } label: { Image(systemName: "xmark") }
-                        .buttonStyle(.borderless).accessibilityLabel("Dismiss selection error")
+                        .buttonStyle(.borderless).accessibilityLabel(localization.chat("Dismiss selection error"))
                 }.font(.caption).foregroundStyle(.red).padding(.horizontal, 12)
             }
 
             if filtered.isEmpty {
                 ContentUnavailableView(
-                    actions.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "No conversations yet" : "No matches",
+                    actions.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? localization.chat("No conversations yet") : localization.chat("No matches"),
                     systemImage: "bubble.left",
-                    description: Text(actions.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Your conversations will appear here." : "Try another conversation title.")
+                    description: Text(actions.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? localization.chat("Your conversations will appear here.") : localization.chat("Try another conversation title."))
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -120,7 +122,7 @@ public struct ConversationSidebar: View {
                         }
                     }.padding(.horizontal, 8).padding(.bottom, 12)
                 }
-                .accessibilityLabel("Conversations")
+                .accessibilityLabel(localization.chat("Conversations"))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -137,7 +139,7 @@ public struct ConversationSidebar: View {
             HStack(spacing: 10) {
                 Image(systemName: "bubble.left").accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(ConversationFilter.title(summary)).lineLimit(2).multilineTextAlignment(.leading)
+                    Text(ConversationFilter.title(summary, localizer: localization)).lineLimit(2).multilineTextAlignment(.leading)
                     if summary.id.rawValue.hasPrefix("pi:conversation:") {
                         Text("Pi").font(.caption).foregroundStyle(.secondary)
                     } else if summary.id.rawValue.hasPrefix("cursor:conversation:") {
@@ -146,7 +148,7 @@ public struct ConversationSidebar: View {
                 }
                 Spacer(minLength: 0)
                 if store.loadedConversations[summary.id]?.activity.isBusy == true {
-                    Image(systemName: "ellipsis").accessibilityLabel("Response in progress")
+                    Image(systemName: "ellipsis").accessibilityLabel(localization.chat("Response in progress"))
                 }
             }
             .padding(10).frame(maxWidth: .infinity, alignment: .leading)
@@ -155,8 +157,8 @@ public struct ConversationSidebar: View {
         }
         .buttonStyle(.plain)
         .disabled(actions.isBusy)
-        .accessibilityLabel(ConversationFilter.title(summary))
-        .accessibilityValue(store.loadedConversations[summary.id]?.activity.isBusy == true ? "Response in progress" : "")
+        .accessibilityLabel(ConversationFilter.title(summary, localizer: localization))
+        .accessibilityValue(store.loadedConversations[summary.id]?.activity.isBusy == true ? localization.chat("Response in progress") : "")
         .accessibilityAddTraits(selected ? .isSelected : [])
         .help(summary.title)
     }

@@ -1,3 +1,4 @@
+import AppLocalization
 import ChatCore
 import SwiftUI
 
@@ -7,6 +8,7 @@ private typealias StoredState<Value> = SwiftUI.State<Value>
 /// Slots match ChatShellView; no composer, minimap, provider settings, or runtime is created here.
 @MainActor
 public struct ChatWorkspaceView<Composer: View, Minimap: View>: View {
+    @ChatLocalization private var localization
     private let store: ChatStore
     private let navigation: TranscriptNavigation
     private let composer: Composer
@@ -50,7 +52,8 @@ public struct ChatWorkspaceView<Composer: View, Minimap: View>: View {
                         if layout.inlineMinimap && Minimap.self != EmptyView.self {
                             Divider()
                             minimap.frame(width: WorkspaceLayout.minimapWidth).clipped()
-                                .accessibilityLabel("Transcript overview")
+                                .accessibilityElement(children: .contain)
+                                .accessibilityLabel(localization.chat("Transcript overview"))
                         }
                     }
                 }
@@ -59,7 +62,7 @@ public struct ChatWorkspaceView<Composer: View, Minimap: View>: View {
             .background(ChatTheme.background)
             .sheet(isPresented: $sidebarPresented) {
                 VStack(spacing: 0) {
-                    HStack { Spacer(); Button("Done") { sidebarPresented = false }.keyboardShortcut(.cancelAction) }.padding(12)
+                    HStack { Spacer(); Button(localization.chat("Done")) { sidebarPresented = false }.keyboardShortcut(.cancelAction) }.padding(12)
                     ConversationSidebar(store: store, onSelection: { sidebarPresented = false })
                 }.frame(minWidth: 260, idealWidth: 320, minHeight: 360, idealHeight: 520)
             }
@@ -72,25 +75,25 @@ public struct ChatWorkspaceView<Composer: View, Minimap: View>: View {
             Button {
                 if layout.inlineSidebar { sidebarVisible.toggle() } else { sidebarPresented = true }
             } label: { Image(systemName: "sidebar.left") }
-            .buttonStyle(.borderless).accessibilityLabel("Toggle conversations sidebar")
-            .help("Show or hide conversations")
+            .buttonStyle(.borderless).accessibilityLabel(localization.chat("Toggle conversations sidebar"))
+            .help(localization.chat("Show or hide conversations"))
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(store.conversations.first(where: { $0.id == store.selectedConversationID }).map(ConversationFilter.title) ?? "New conversation")
+                Text(store.conversations.first(where: { $0.id == store.selectedConversationID }).map { ConversationFilter.title($0, localizer: localization) } ?? localization.chat("New conversation"))
                     .font(.headline).lineLimit(1)
-                Text(store.modelSelection.map { "\($0.modelID) · \($0.account.providerID)" } ?? "No model selected")
+                Text(store.modelSelection.map { "\($0.modelID) · \($0.account.providerID)" } ?? localization.chat("No model selected"))
                     .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                    .accessibilityLabel("Selected model")
-                    .accessibilityValue(store.modelSelection?.modelID ?? "None")
+                    .accessibilityLabel(localization.chat("Selected model"))
+                    .accessibilityValue(store.modelSelection?.modelID ?? localization.chat("None"))
             }.frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
 
-            let connection = ConnectionPresentation(store.connection)
+            let connection = ConnectionPresentation(store.connection, localizer: localization)
             Image(systemName: connection.symbol)
                 .foregroundStyle(store.connection.canSend ? Color.secondary : Color.primary)
                 .accessibilityLabel(connection.title).help(connection.title)
             if !layout.inlineMinimap && Minimap.self != EmptyView.self {
                 Button { minimapPresented.toggle() } label: { Image(systemName: "rectangle.trailingthird.inset.filled") }
-                    .buttonStyle(.borderless).accessibilityLabel("Show transcript overview")
+                    .buttonStyle(.borderless).accessibilityLabel(localization.chat("Show transcript overview"))
                     .popover(isPresented: $minimapPresented) {
                         minimap.frame(width: 240, height: 420).padding(12)
                     }
@@ -100,23 +103,25 @@ public struct ChatWorkspaceView<Composer: View, Minimap: View>: View {
 
     @ViewBuilder private var activityBar: some View {
         VStack(alignment: .leading, spacing: 8) {
-            let connection = ConnectionPresentation(store.connection)
+            let connection = ConnectionPresentation(store.connection, localizer: localization)
             if let detail = connection.detail {
                 Label {
-                    Text("\(connection.title). \(detail)").fixedSize(horizontal: false, vertical: true)
+                    Text(verbatim: localization.chat("{title}. {detail}", [
+                        "title": .string(connection.title), "detail": .string(detail),
+                    ])).fixedSize(horizontal: false, vertical: true)
                 } icon: { Image(systemName: connection.symbol) }
                 .foregroundStyle(.secondary)
             }
             if let failure = store.visibleFailure {
                 HStack(alignment: .top) {
-                    Label(failure.message, systemImage: "exclamationmark.triangle")
+                    Label(localization.diagnostic(failure.message), systemImage: "exclamationmark.triangle")
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 4)
                     Button { store.clearFailure() } label: { Image(systemName: "xmark") }
-                        .buttonStyle(.borderless).accessibilityLabel("Dismiss error")
+                        .buttonStyle(.borderless).accessibilityLabel(localization.chat("Dismiss error"))
                 }.foregroundStyle(.red)
             } else if case .failed(let message) = store.selectedConversation?.activity {
-                Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(.red)
+                Label(localization.diagnostic(message), systemImage: "exclamationmark.triangle").foregroundStyle(.red)
                     .fixedSize(horizontal: false, vertical: true)
             }
             if store.isSending {
@@ -131,9 +136,9 @@ public struct ChatWorkspaceView<Composer: View, Minimap: View>: View {
                             defer { if stopPendingFor == id { stopPendingFor = nil } }
                             await store.stop(conversationID: id)
                         }
-                    } label: { Label("Stop", systemImage: "stop.fill") }
+                    } label: { Label(localization.chat("Stop"), systemImage: "stop.fill") }
                     .disabled(stopPending || store.selectedConversation?.activity == .stopping)
-                    .accessibilityLabel("Stop response")
+                    .accessibilityLabel(localization.chat("Stop response"))
                 }
             }
         }
@@ -143,8 +148,8 @@ public struct ChatWorkspaceView<Composer: View, Minimap: View>: View {
     }
 
     private var activityLabel: String {
-        if stopPending || store.selectedConversation?.activity == .stopping { return "Stopping…" }
-        return store.selectedConversation?.activity == .streaming ? "Responding…" : "Sending…"
+        if stopPending || store.selectedConversation?.activity == .stopping { return localization.chat("Stopping…") }
+        return store.selectedConversation?.activity == .streaming ? localization.chat("Responding…") : localization.chat("Sending…")
     }
 }
 
