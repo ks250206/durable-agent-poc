@@ -162,6 +162,9 @@ struct NativeAppTests {
     @Test func quittingCancelsAnOpeningIsolatedRuntimeAndReleasesStorage() async throws {
         let session = AppSession(arguments: ["DurableChat", "--test-runtime"])
         let suite = try #require(session.isolatedDefaultsName)
+        let cleanupProbe = try #require(UserDefaults(suiteName: suite))
+        cleanupProbe.set("written-before-shutdown", forKey: "cleanup-sentinel")
+        #expect(cleanupProbe.string(forKey: "cleanup-sentinel") == "written-before-shutdown")
         let startup = Task { await session.start() }
         await Task.yield()
         await session.shutdown()
@@ -273,6 +276,9 @@ extension NativeAppTests {
         try corrupt.write(to: root.appendingPathComponent("routing.json"))
         let session = AppSession(arguments: ["DurableChat", "--test-runtime"], isolatedDirectory: root)
         let suite = try #require(session.isolatedDefaultsName)
+        let cleanupProbe = try #require(UserDefaults(suiteName: suite))
+        cleanupProbe.set("written-before-shutdown", forKey: "cleanup-sentinel")
+        #expect(cleanupProbe.string(forKey: "cleanup-sentinel") == "written-before-shutdown")
         await session.start()
         #expect(session.failure != nil && session.store == nil && session.settings == nil)
         #expect(try fixtureCalls(root).isEmpty)
@@ -592,6 +598,23 @@ extension NativeAppTests {
             #expect(probe.string(forKey: AppearanceSettings.defaultStorageKey) == "dark")
             await isolated.shutdown()
             #expect(probe.persistentDomain(forName: suite)?.isEmpty != false)
+        }
+    }
+
+    @Test func appAppearanceUsesItsOwnerUnderAnOppositeExplicitAmbientScheme() async throws {
+        let suite = "DurableChat.BareAppearanceOwner.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AppearanceSettings(defaults: defaults)
+        for choice in [AppearanceChoice.dark, .light] {
+            settings.choice = choice
+            let opposite: ColorScheme = choice == .dark ? .light : .dark
+            let root = Color.clear.appAppearance(settings).environment(\.colorScheme, opposite)
+            let host = HostedApp(root, width: 400, ambient: NSAppearance(named: opposite == .dark ? .darkAqua : .aqua))
+            defer { host.close() }
+            let expected = settings.resolve(systemColorScheme: opposite).nsAppearance.name
+            try await appLocalizedSettle { host.window.appearance?.name == expected }
+            #expect(host.window.effectiveAppearance.name == expected)
         }
     }
 

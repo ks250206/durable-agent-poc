@@ -255,6 +255,8 @@ opening/failure/demo states. It injects the reference, uses public `@ChatAppeara
 through a non-interactive native anchor. Explicit choices assign Aqua/Dark Aqua; System assigns nil
 to release the window override and follow live AppKit inheritance. No window/store/editor/navigation
 identity is keyed by the choice and there is no lifecycle observer or cached System scheme.
+Each anchor fills its owning presentation for its lifetime; do not move/remove it while retaining the
+same window with a different appearance owner without first releasing that window override.
 
 The Settings root reuses `AppearancePickerView(settings:localizer:)` with the current language
 owner's live localizer. Its six existing Appearance-table keys are reused without new labels or
@@ -262,7 +264,9 @@ duplicate translations. Language reset and appearance reset operate independentl
 
 For #38: keep this session and both root modifiers when wiring tabs and the prompt rail. Apply
 `.appAppearance(session.appearance)` at every **new app-owned sheet/popover root**, using the same
-reference; a newly created native hosting controller is a presentation boundary too. Within ChatUI,
+reference. The owner environment wraps the appearance modifier, so the modifier itself resolves explicit
+choices from that owner even in a bare hosting root with an opposite ambient color scheme. A newly
+created native hosting controller is a presentation boundary too. Within ChatUI,
 use the public foundation `@ChatAppearance`, `ResolvedAppearance`, and `ChatTheme` contracts; do not
 import the executable target or create another preferences owner. Existing native descendants inherit
 their window appearance. Custom production editor text/background/insertion/selection palette and

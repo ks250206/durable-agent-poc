@@ -6,7 +6,7 @@ extension View {
     /// Apply to every app-owned presentation root (including future #38 tab/rail popovers).
     /// Share the session owner; this modifier never owns state, defaults, or an editor.
     func appAppearance(_ settings: AppearanceSettings) -> some View {
-        environment(settings).modifier(AppAppearanceRoot(settings: settings))
+        modifier(AppAppearanceRoot(settings: settings)).environment(settings)
     }
 }
 
