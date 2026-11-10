@@ -590,22 +590,23 @@ extension NativeAppTests {
                 let callsBefore = try fixtureCalls(root).count
                 let host = HostedApp(NativeWorkspaceView(session: session), width: 1200)
                 defer { host.close() }
-                try await appLocalizedSettle { host.descendants(MinimapInputView.self).count == 1 }
-                let map = try #require(host.descendants(MinimapInputView.self).first)
-                #expect(map.accessibilityLabel() == localization.string("Full-history role overview", table: .chatUI))
+                try await appLocalizedSettle { host.descendants(PromptRailInputView.self).count == 1 }
+                let map = try #require(host.descendants(PromptRailInputView.self).first)
+                #expect(map.accessibilityLabel() == localization.string("User input navigation", table: .chatUI))
                 try await appLocalizedSettle { session.navigation.viewport.lastVisibleMessageID == store.messages.last?.id }
                 #expect(host.window.makeFirstResponder(map))
                 map.keyDown(with: try #require(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
                     windowNumber: host.window.windowNumber, context: nil, characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: 116)))
                 try await appLocalizedSettle { session.navigation.scrollRequest != nil }
                 let target = try #require(session.navigation.scrollRequest?.messageID)
+                #expect(store.messages.first { $0.id == target }?.role == .user)
                 try await appLocalizedSettle { session.navigation.viewport.firstVisibleMessageID == target }
                 let request = session.navigation.scrollRequest?.id
                 localization.choice = choice == .english ? .japanese : .english
-                try await appLocalizedSettle { map.accessibilityLabel() == localization.string("Full-history role overview", table: .chatUI) }
+                try await appLocalizedSettle { map.accessibilityLabel() == localization.string("User input navigation", table: .chatUI) }
                 localization.choice = choice
-                try await appLocalizedSettle { map.accessibilityLabel() == localization.string("Full-history role overview", table: .chatUI) }
-                #expect(host.descendants(MinimapInputView.self).first === map && host.window.firstResponder === map)
+                try await appLocalizedSettle { map.accessibilityLabel() == localization.string("User input navigation", table: .chatUI) }
+                #expect(host.descendants(PromptRailInputView.self).first === map && host.window.firstResponder === map)
                 #expect(session.navigation.scrollRequest?.id == request && store.selectedConversationID == cursor)
                 #expect(try fixtureCalls(root).count == callsBefore) // Presentation never re-probes or starts a turn.
                 await store.stop(conversationID: origin)
