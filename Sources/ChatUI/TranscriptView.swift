@@ -10,12 +10,25 @@ struct TranscriptMeasurements: Equatable {
     var bottom: CGFloat?
 
     func viewport(orderedIDs: [MessageID], height: CGFloat) -> TranscriptViewport {
-        guard height > 0 else { return TranscriptViewport() }
+        guard height.isFinite, height > 0 else { return TranscriptViewport() }
         let visible = orderedIDs.filter { id in
-            guard let frame = frames[id], frame.height > 0 else { return false }
+            guard let frame = frames[id], !frame.isInfinite, !frame.isNull,
+                  frame.minY.isFinite, frame.maxY.isFinite, frame.height > 0 else { return false }
             return frame.maxY > 0 && frame.minY < height
         }
-        return TranscriptViewport(firstVisibleMessageID: visible.first, lastVisibleMessageID: visible.last)
+        // Distance to the *row interval*, not its midpoint: a huge assistant row can
+        // contain the viewport center even when its own center is far offscreen.
+        // In inter-row spacing choose the nearest visible interval (earlier on ties).
+        let centerY = height / 2
+        let center = visible.min { left, right in
+            func distance(_ id: MessageID) -> CGFloat {
+                guard let frame = frames[id] else { return .infinity }
+                return max(frame.minY - centerY, centerY - frame.maxY, 0)
+            }
+            return distance(left) < distance(right)
+        }
+        return TranscriptViewport(firstVisibleMessageID: visible.first, lastVisibleMessageID: visible.last,
+                                  centerVisibleMessageID: center)
     }
 }
 

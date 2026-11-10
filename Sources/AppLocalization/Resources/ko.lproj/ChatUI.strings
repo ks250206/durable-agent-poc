@@ -104,3 +104,10 @@
 "{role} message" = "{role} 메시지";
 "{title}. {detail}" = "{title}. {detail}";
 "↵ Send · ⇧↵ New line" = "↵ 보내기 · ⇧↵ 줄바꿈";
+
+/* Issue #36: standalone user-input rail. */
+"User input navigation" = "사용자 입력 탐색";
+"User input {current} of {total}" = "사용자 입력 {current} / {total}";
+"Each bar is a user input. The bright bar follows the transcript center. Hover previews the original input. Click, Up/Down, Home/End or Return jumps to an input. Tab leaves navigation." = "각 막대는 사용자 입력입니다. 밝은 막대는 대화 표시 영역의 중심을 따릅니다. 마우스를 올리면 원래 입력을 미리 봅니다. 클릭, 위/아래 화살표, Home/End 또는 Return으로 입력으로 이동합니다. Tab으로 탐색을 벗어납니다.";
+"Showing inputs {first}–{last} of {total}. Scroll here or use Page Up/Down to browse every input." = "전체 {total}개 중 {first}–{last}번째 입력을 표시합니다. 여기에서 스크롤하거나 Page Up/Down으로 모든 입력을 탐색할 수 있습니다.";
+"{count} user inputs. Transcript center unavailable." = "사용자 입력 {count}개. 대화 표시 영역의 중심을 확인할 수 없습니다.";

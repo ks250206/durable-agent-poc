@@ -26,8 +26,8 @@ import Testing
         ids[3]: CGRect(x: 0, y: 300, width: 400, height: 100), // touches bottom; invisible
         ids[4]: CGRect(x: 0, y: 50, width: 400, height: 0),
     ])
-    #expect(geometry.viewport(orderedIDs: ids, height: 300) == TranscriptViewport(firstVisibleMessageID: ids[1], lastVisibleMessageID: ids[2]))
-    #expect(geometry.viewport(orderedIDs: [ids[2]], height: 300) == TranscriptViewport(firstVisibleMessageID: ids[2], lastVisibleMessageID: ids[2]))
+    #expect(geometry.viewport(orderedIDs: ids, height: 300) == TranscriptViewport(firstVisibleMessageID: ids[1], lastVisibleMessageID: ids[2], centerVisibleMessageID: ids[2]))
+    #expect(geometry.viewport(orderedIDs: [ids[2]], height: 300) == TranscriptViewport(firstVisibleMessageID: ids[2], lastVisibleMessageID: ids[2], centerVisibleMessageID: ids[2]))
     #expect(geometry.viewport(orderedIDs: ids, height: 0) == TranscriptViewport())
     #expect(geometry.viewport(orderedIDs: [MessageID("not-measured")], height: 300) == TranscriptViewport())
 }

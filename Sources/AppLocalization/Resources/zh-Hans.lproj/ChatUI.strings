@@ -104,3 +104,10 @@
 "{role} message" = "{role}消息";
 "{title}. {detail}" = "{title}。{detail}";
 "↵ Send · ⇧↵ New line" = "↵ 发送 · ⇧↵ 换行";
+
+/* Issue #36: standalone user-input rail. */
+"User input navigation" = "用户输入导航";
+"User input {current} of {total}" = "用户输入 {current} / {total}";
+"Each bar is a user input. The bright bar follows the transcript center. Hover previews the original input. Click, Up/Down, Home/End or Return jumps to an input. Tab leaves navigation." = "每条横线代表一次用户输入。亮线跟随对话视口中心。悬停可预览原始输入。点击、上下箭头、Home/End 或 Return 可跳转到输入。Tab 可离开导航。";
+"Showing inputs {first}–{last} of {total}. Scroll here or use Page Up/Down to browse every input." = "正在显示全部 {total} 次输入中的第 {first}–{last} 次。在此滚动或使用 Page Up/Down 可浏览所有输入。";
+"{count} user inputs. Transcript center unavailable." = "{count} 次用户输入。对话视口中心不可用。";
