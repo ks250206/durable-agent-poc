@@ -116,6 +116,10 @@ private struct MinimapContent: View {
         .padding(10)
         .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
         .background(.background.secondary)
+        .onChange(of: navigation.scrollRequest?.id) { _, _ in
+            guard let target = navigation.scrollRequest?.messageID, layout.index(for: target) != nil else { return }
+            cursorID = target
+        }
         .sheet(isPresented: $showsMessages) {
             MinimapMessageList(messages: messages, navigation: navigation)
         }

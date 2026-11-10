@@ -267,14 +267,19 @@ struct MinimapNativeHostTests {
         sheet.makeFirstResponder(numberField)
         numberField.selectText(nil)
         let editor = try #require(numberField.currentEditor())
-        editor.insertText("10000")
+        editor.insertText("9000")
         pumpRunLoop()
         try capture(sheetContent, name: "all-messages")
         let beforeListJump = navigation.scrollRequest?.id
         sheet.sendEvent(try key(36, window: sheet))
         try await settle { navigation.scrollRequest?.id != beforeListJump }
-        #expect(navigation.scrollRequest?.messageID == stableID)
-        try await settle { window.sheets.isEmpty }
+        #expect(navigation.scrollRequest?.messageID == store.messages[8999].id)
+        try await settle { window.sheets.isEmpty && input.activeID == store.messages[8999].id }
+        // The list jump must replace the old End-key cursor before subsequent keyboard/AX moves.
+        input.keyDown(with: try key(125, window: window))
+        #expect(navigation.scrollRequest?.messageID == store.messages[9000].id)
+        #expect(input.accessibilityPerformDecrement())
+        #expect(navigation.scrollRequest?.messageID == store.messages[8999].id)
 
         await store.selectConversation(ConversationID("map:b"))
         try await settle { store.selectedConversationID == ConversationID("map:b") }
