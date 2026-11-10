@@ -11,8 +11,8 @@ case "$CONFIGURATION" in
 esac
 
 cd "$ROOT"
-swift build -c "$CONFIGURATION" --product DurableChat
-BIN_DIR="$(swift build -c "$CONFIGURATION" --show-bin-path)"
+swift build --build-system swiftbuild -c "$CONFIGURATION" --product DurableChat
+BIN_DIR="$(swift build --build-system swiftbuild -c "$CONFIGURATION" --show-bin-path)"
 mkdir -p "$OUTPUT"
 OUTPUT="$(cd "$OUTPUT" && pwd)"
 # Stage in the destination filesystem. Preserve any unrelated output files.

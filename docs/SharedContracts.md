@@ -67,7 +67,10 @@ list ordering; the UI may derive filtered or sorted summaries. Do not use `snaps
 `SendRequest: Equatable, Sendable` has immutable `conversationID`, `messageID: MessageID`, `text: String`,
 `model: ModelSelection`; `init(conversationID:messageID:text:model:)` creates a UUID message ID by default.
 The client message ID is an idempotency key: persist/reuse it for the user message and when retrying the
-same submission. Return from send on acceptance, then publish streaming/completion via events. Reject
+same submission. ChatStore currently exposes new submissions only; an explicit retry UI is deferred.
+Publish acceptance including the client user-message ID before returning from send, then publish
+streaming/completion via events. Event delivery can lag command completion; ChatStore keeps sending
+disabled until the accepted message or busy state is observed. Reject
 empty/busy/unconfigured requests in the backend too. Never route a submission by the *current* UI selection.
 `stop` targets only its given conversation, preserves partial output with `.stopped` message status, and
 publishes an idle conversation. Canceling an event subscriber releases that subscriber's resources and
@@ -120,8 +123,8 @@ a delayed conversation-A error in B. Clear with `clearFailure()`. `isSending` in
 command and selected conversation activity. `canSend` requires connected, loaded selection, model,
 and nonbusy state; the composer must additionally reject whitespace and marked-text submission.
 `send` validates and captures conversation/model before suspension and preserves original whitespace.
-`sendDraft` clears the draft only after acceptance and only if the draft and selection are unchanged.
-Draft is a single UI buffer, not persistent per-conversation history. Backends own persistent transcripts.
+`sendDraft` clears the draft only after acceptance and only if the draft is unchanged.
+Draft is a single UI buffer, not persistent per-conversation history. Accepted text is cleared if unchanged even after switching conversations, so it cannot be accidentally resubmitted in the new conversation. Backends own persistent transcripts.
 
 ## Provider, model, and credential boundary (`import ChatCore`; #7/#8 implement)
 

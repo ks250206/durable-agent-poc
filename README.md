@@ -33,7 +33,7 @@ That Command Line Tools release also needs the bundled Swift Testing plugin path
 swift test -Xswiftc -plugin-path -Xswiftc "$DEVELOPER_DIR/usr/lib/swift/host/plugins/testing"
 ```
 
-`build-app.sh [debug|release] [output-directory]` copies SwiftPM resource bundles into `Contents/Resources`
+`build-app.sh [debug|release] [output-directory]` explicitly selects `--build-system swiftbuild` and copies SwiftPM resource bundles into `Contents/Resources`
 where Swift Build's `Bundle.module` expects them, includes upstream third-party notices, validates the plist,
 and applies/verifies an ad-hoc signature. It replaces only `DurableChat.app` in the output directory.
 This is local development packaging, not a notarized distribution.

@@ -32,11 +32,13 @@ private actor TestBackend: ChatBackend {
     var heldSend: CheckedContinuation<Void, any Error>?
     let holdSend: Bool
     let rejectSend: Bool
+    let delayAcceptanceEvent: Bool
 
-    init(state: ChatSnapshot = connectedState(), holdSend: Bool = false, rejectSend: Bool = false) {
+    init(state: ChatSnapshot = connectedState(), holdSend: Bool = false, rejectSend: Bool = false, delayAcceptanceEvent: Bool = false) {
         self.state = state
         self.holdSend = holdSend
         self.rejectSend = rejectSend
+        self.delayAcceptanceEvent = delayAcceptanceEvent
     }
     func snapshot() async throws -> ChatSnapshot { state }
     func events() async -> AsyncThrowingStream<ChatEvent, any Error> {
@@ -88,6 +90,12 @@ private actor TestBackend: ChatBackend {
         requests.append(request)
         if holdSend { try await withCheckedThrowingContinuation { heldSend = $0 } }
         if rejectSend { throw TestFailure.rejected }
+        if !delayAcceptanceEvent { publishAcceptance(request) }
+    }
+    func publishAcceptance(_ request: SendRequest) {
+        var value = conversation(request.conversationID)
+        value.messages = [ChatMessage(id: request.messageID, conversationID: request.conversationID, role: .user, content: request.text)]
+        publish(.conversationUpdated(value))
     }
     func releaseSend() { heldSend?.resume(); heldSend = nil }
     func stop(conversationID: ConversationID) async throws {
@@ -268,7 +276,7 @@ private func waitUntilAsync(_ condition: @MainActor () async -> Bool, sourceLoca
     #expect(store.conversations.map(\.id) == [b])
 }
 
-@Test @MainActor func switchingConversationDoesNotClearItsUnchangedDraftWhenOldSendCompletes() async {
+@Test @MainActor func switchingConversationClearsAcceptedUnchangedSharedDraft() async {
     let backend = TestBackend(holdSend: true)
     let store = ChatStore(backend: backend)
     let observing = Task { await store.start() }
@@ -282,5 +290,35 @@ private func waitUntilAsync(_ condition: @MainActor () async -> Bool, sourceLoca
     await waitUntil { store.selectedConversationID == b }
     await backend.releaseSend()
     await sending.value
-    #expect(store.draft == "same text")
+    #expect(store.draft.isEmpty)
+}
+
+@Test @MainActor func acceptedSendRemainsBusyUntilItsEventIsDelivered() async {
+    let backend = TestBackend(delayAcceptanceEvent: true)
+    let store = ChatStore(backend: backend)
+    let observing = Task { await store.start() }
+    defer { observing.cancel() }
+    await waitUntil { store.selectedConversationID == a }
+    store.modelSelection = model
+    #expect(await store.send("first"))
+    #expect(store.isSending)
+    #expect(!store.canSend)
+    #expect(!(await store.send("duplicate")))
+    let requests = await backend.requests
+    #expect(requests.count == 1)
+    await backend.publishAcceptance(requests[0])
+    await waitUntil { !store.isSending }
+    #expect(store.canSend)
+}
+
+@Test @MainActor func createDoesNotEraseAnotherConversationFailure() async {
+    let backend = TestBackend(rejectSend: true)
+    let store = ChatStore(backend: backend)
+    let observing = Task { await store.start() }
+    defer { observing.cancel() }
+    await waitUntil { store.selectedConversationID == a }
+    store.modelSelection = model
+    #expect(!(await store.send("fails")))
+    _ = await store.createConversation()
+    #expect(store.lastFailure?.conversationID == a)
 }

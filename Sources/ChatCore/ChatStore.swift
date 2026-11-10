@@ -16,6 +16,7 @@ public final class ChatStore {
 
     @ObservationIgnored private let backend: any ChatBackend
     private var pendingSends: Set<ConversationID> = []
+    private var awaitingAcceptance: [ConversationID: MessageID] = [:]
 
     public init(backend: any ChatBackend) { self.backend = backend }
 
@@ -25,7 +26,7 @@ public final class ChatStore {
     public var messages: [ChatMessage] { selectedConversation?.messages ?? [] }
     public var isSending: Bool {
         guard let id = selectedConversationID else { return false }
-        return pendingSends.contains(id) || (loadedConversations[id]?.activity.isBusy ?? false)
+        return pendingSends.contains(id) || awaitingAcceptance[id] != nil || (loadedConversations[id]?.activity.isBusy ?? false)
     }
     public var canSend: Bool {
         connection.canSend && selectedConversation != nil && modelSelection != nil && !isSending
@@ -65,7 +66,7 @@ public final class ChatStore {
     public func createConversation(title: String? = nil) async -> ConversationID? {
         do {
             let id = try await backend.createConversation(title: title)
-            lastFailure = nil
+            if lastFailure?.operation == "create", lastFailure?.conversationID == nil { lastFailure = nil }
             return id
         } catch {
             record(error, operation: "create")
@@ -97,7 +98,14 @@ public final class ChatStore {
             guard !isSending else { throw ChatBackendError.busy }
             pendingSends.insert(id)
             defer { pendingSends.remove(id) }
-            try await backend.send(SendRequest(conversationID: id, text: text, model: model))
+            let request = SendRequest(conversationID: id, text: text, model: model)
+            awaitingAcceptance[id] = request.messageID
+            do {
+                try await backend.send(request)
+            } catch {
+                awaitingAcceptance.removeValue(forKey: id)
+                throw error
+            }
             // An older command completing must not erase a newer failure from another conversation.
             if lastFailure?.conversationID == id { lastFailure = nil }
             return true
@@ -109,8 +117,7 @@ public final class ChatStore {
 
     public func sendDraft() async {
         let submitted = draft
-        let conversationID = selectedConversationID
-        if await send(submitted), draft == submitted, selectedConversationID == conversationID { draft = "" }
+        if await send(submitted), draft == submitted { draft = "" }
     }
 
     public func stop() async {
@@ -131,14 +138,24 @@ public final class ChatStore {
             loadedConversations = [:]
             for conversation in snapshot.loadedConversations {
                 loadedConversations[conversation.id] = conversation
+                acknowledgeAcceptance(conversation)
             }
+            if !snapshot.connection.canSend { awaitingAcceptance.removeAll() }
         case .conversationUpdated(let conversation):
             loadedConversations[conversation.id] = conversation
+            acknowledgeAcceptance(conversation)
             if let index = conversations.firstIndex(where: { $0.id == conversation.id }) {
                 conversations[index] = conversation.summary
             } else {
                 conversations.append(conversation.summary)
             }
+        }
+    }
+
+    private func acknowledgeAcceptance(_ conversation: ConversationSnapshot) {
+        guard let messageID = awaitingAcceptance[conversation.id] else { return }
+        if conversation.activity.isBusy || conversation.messages.contains(where: { $0.id == messageID }) {
+            awaitingAcceptance.removeValue(forKey: conversation.id)
         }
     }
 

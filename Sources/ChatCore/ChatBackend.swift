@@ -37,6 +37,7 @@ public protocol ChatBackend: Sendable {
     /// Loads and selects a conversation (nil clears selection); emits an authoritative snapshot.
     func selectConversation(_ id: ConversationID?) async throws
     /// Returns when accepted, not when generation completes. Reject empty/busy/unconfigured submissions.
+    /// Publish acceptance with its user message ID before returning; event delivery may still be pending.
     func send(_ request: SendRequest) async throws
     /// Stops only this conversation; preserve partial output and publish .stopped / idle state.
     func stop(conversationID: ConversationID) async throws
