@@ -5,6 +5,33 @@ import Testing
 import Darwin
 
 @Suite(.serialized) struct CodexRuntimeTests {
+    @Test func archiveSizeBoundaryPreservesReadablePreviousValue() throws {
+        let f = try CodexFixture(); defer { f.clean() }
+        let archive = f.root.appendingPathComponent("boundary.json")
+        // JSON quotes count toward the boundary: these values encode to exactly 10 and 11 bytes.
+        try CodexFiles.write("12345678", to: archive, maximumBytes: 10)
+        #expect(try CodexFiles.read(String.self, from: archive, maximumBytes: 10) == "12345678")
+        let before = try Data(contentsOf: archive)
+        #expect(throws: CodexRuntimeError.storage) {
+            try CodexFiles.write("123456789", to: archive, maximumBytes: 10)
+        }
+        #expect(try Data(contentsOf: archive) == before)
+        #expect(try CodexFiles.read(String.self, from: archive, maximumBytes: 10) == "12345678")
+        let absent = f.root.appendingPathComponent("never-created.json")
+        #expect(throws: CodexRuntimeError.storage) {
+            try CodexFiles.write("123456789", to: absent, maximumBytes: 10)
+        }
+        #expect(!FileManager.default.fileExists(atPath: absent.path))
+        #expect(try FileManager.default.contentsOfDirectory(atPath: f.root.path).allSatisfy { !$0.hasPrefix(".codex-") })
+        let permissions = try FileManager.default.attributesOfItem(atPath: archive.path)[.posixPermissions] as? NSNumber
+        #expect(permissions?.intValue == 0o600)
+        // The same boundary is enforced when reading an externally oversized value.
+        try CodexFiles.write("123456789", to: archive)
+        #expect(throws: CodexRuntimeError.storage) {
+            _ = try CodexFiles.read(String.self, from: archive, maximumBytes: 10)
+        }
+    }
+
     @Test func accountKindsPagingAndGlobalLoginRemainUntouched() async throws {
         let f = try CodexFixture(); defer { f.clean() }
         let service = try await f.settings()

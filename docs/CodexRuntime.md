@@ -52,7 +52,8 @@ Use an **app-owned** storage root, not a source checkout or the CLI's state dire
 private `control/` and `workspace/` directories, preferences, conversations, and `runtime.lock`.
 The backend enforces exclusive ownership with flock. Constructors fail on corrupt/foreign archives;
 they never silently reset history. Files are replaced via a new 0600 temporary file, fsync, then rename;
-directories are 0700. Direct symlink storage files/roots are rejected. CLI authentication never enters
+directories are 0700. Reads and writes share a 128 MiB encoded-file limit. Oversized updates fail before
+creating/replacing any file; the prior readable archive remains intact. No history is silently truncated. Direct symlink storage files/roots are rejected. CLI authentication never enters
 these files; user/assistant conversation text is intentionally persisted, without truncating history.
 
 ## Wire protocol and ownership
@@ -148,6 +149,6 @@ CI harness note: native AppKit host suites share a serialized parent because foc
 is process-global. Their bounded waits service the event loop. Fixture RPC budgets are 5 seconds
 (production defaults remain 20); explicit hung-process/blocked-stdin/turn-deadline assertions remain.
 
-Local CLT verification: all **100 tests passed** (ChatUI 34, ChatCore 14, app integration 4,
+Local CLT verification: all **101 tests passed** (ChatUI 34, ChatCore 14, app integration 4,
 runtime 48 including 12 Codex executable-fixture tests). Existing CLT linker search-path warnings
 are nonfatal. CI and independent Cursor Agent review are separate parent-owned gates.
