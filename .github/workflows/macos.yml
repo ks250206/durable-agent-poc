@@ -51,7 +51,8 @@ jobs:
           fi
           test -d "$plugin"
           # Native windows/IME synthetic tests are required; no headless skip or weaker replacement.
-          swift test -Xswiftc -plugin-path -Xswiftc "$plugin"
+          python3 -m unittest discover -s scripts -p 'test_test_results.py'
+          python3 scripts/run-verified-tests.py --plugin-path "$plugin" --output "$RUNNER_TEMP/verified-tests"
       - name: Package and verify local development signature
         run: scripts/build-app.sh
       - name: Validate actual packaged localization resources
@@ -74,5 +75,6 @@ jobs:
           path: |
             dist/DurableChat-macOS.zip
             ${{ runner.temp }}/native-artifacts/
+            ${{ runner.temp }}/verified-tests/
           if-no-files-found: warn
           retention-days: 7

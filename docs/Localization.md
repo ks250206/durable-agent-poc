@@ -349,3 +349,19 @@ lookup and `.localized` provenance. The unchanged release packaging script and
 under ignored `dist/qa/`; no user reference image is a resource or artifact. Production appearance
 scene/editor adoption remains #33/#35; physical IME and OS accessibility setting changes are not
 certified by these injected/synthetic tests. CI and independent review remain separate PR gates.
+
+## Issue #37 trajectory resources
+
+ChatUI now has **130 keys** in en/ja/zh-Hans/ko (109 existing, including all five #36 rail keys, plus
+21 trajectory/tab keys). Both strict inventories retain exact-set and named-placeholder checks.
+The six Appearance keys and other tables are unchanged. **Chat** is reserved for #38's application
+tab switch; **Trajectory** is displayed by this standalone component and is also available for that
+switch. The former vertical-map/sheet's existing resource keys remain explicitly reserved for resource
+compatibility, with an honest non-display reason rather than false source coverage. No audit exemption
+or automatic inventory update mode was added.
+
+Trajectory labels/help, role/status and actual dates/counts use the live localizer. Message content,
+code, IDs and paths are shown/copied verbatim. The full original content is searched and exposed in
+the selectable inspector and cell AX value; the log preview alone is bounded and is labelled as such
+in search help. New source sites are individually classified in the inventory. No new Runtime,
+Common, Appearance or App keys are introduced.

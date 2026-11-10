@@ -111,3 +111,26 @@
 "Each bar is a user input. The bright bar follows the transcript center. Hover previews the original input. Click, Up/Down, Home/End or Return jumps to an input. Tab leaves navigation." = "各横棒はユーザー入力です。明るい棒は会話の表示領域の中心に対応します。ホバーで元の入力を表示します。クリック、上下矢印、Home/End、Returnで入力へ移動します。Tabでナビゲーションを離れます。";
 "Showing inputs {first}–{last} of {total}. Scroll here or use Page Up/Down to browse every input." = "全{total}件の入力のうち{first}〜{last}件目を表示中。ここでスクロールするか、Page Up/Downですべての入力を参照できます。";
 "{count} user inputs. Transcript center unavailable." = "ユーザー入力{count}件。会話の表示領域の中心を取得できません。";
+
+/* Issue #37 trajectory and #38 tab labels. */
+"Chat" = "チャット";
+"Trajectory" = "軌跡";
+"Search message text" = "メッセージ本文を検索";
+"Search the entire original text. Previews are shortened; select a row to read and copy the full message." = "全文を検索します。プレビューは短縮表示です。行を選択すると原文の全文を読み、コピーできます。";
+"All roles" = "すべてのロール";
+"Filter by role" = "ロールで絞り込む";
+"Chronological message log" = "時系列メッセージログ";
+"Select a row to read the original. Return jumps to its chat message. Command-C copies the whole message." = "行を選択すると原文を表示します。Return でチャットの該当メッセージへ移動、Command-C で全文をコピーします。";
+"Original message, plain text" = "原文（プレーンテキスト）";
+"Jump to message" = "メッセージへ移動";
+"Copy the entire original message verbatim" = "メッセージの原文全体をそのままコピー";
+"{shown} of {total} messages" = "{total} 件中 {shown} 件のメッセージ";
+"No messages for this role" = "このロールのメッセージはありません";
+"No matching messages" = "一致するメッセージはありません";
+"Select a message to inspect its original text" = "メッセージを選択すると原文を表示します";
+"Input / User" = "入力 / ユーザー";
+"Assistant / Model" = "アシスタント / モデル";
+"Tool / System" = "ツール / システム";
+"Earlier → Later · text-weighted order" = "過去 → 最新 · 本文量に応じた順序表示";
+"Full-history role overview" = "全履歴のロール別概観";
+"Left/Right or Up/Down navigate every message. Home/End reach the ends. Return repeats a jump. The solid outline is the actual chat viewport; the dashed line is your target. Tab leaves the overview." = "左右または上下キーですべてのメッセージへ移動します。Home/End で先頭・末尾へ、Return で再度移動します。実線の枠は実際のチャット表示範囲、破線は操作対象です。Tab で概観から離れます。";

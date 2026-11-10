@@ -410,3 +410,90 @@ compatibility colors, live override/System changes, and injected accessibility r
 resolved appearance; it does not claim the future production editor/window wiring is implemented.
 Any saved PNG is rendered from this synthetic host. User reference images are never copied or used
 as test fixtures/artifacts. Tests use fresh disposable defaults and no provider/network/account calls.
+
+## Issue #37 trajectory handoff (application tabs: #38)
+
+`@MainActor public ConversationTrajectory(store: ChatStore, navigation: TranscriptNavigation): View`
+provides a standalone, read-only full-history inspector. Pass the **same instances** as the chat
+transcript; the existing owner still starts `store.start()` exactly once. The public
+`ConversationMinimap(store:navigation:)` initializer remains compatible and supplies the compact
+`PromptRail` in the existing narrow map/popover slot until #38 lands. It does not squeeze the full
+trajectory into that slot. The retired vertical role map and modal message list no longer occupy it.
+`PromptRail` remains the independent thin right-edge chat navigator.
+
+CI completion evidence is checked against every discovered test ID using the
+[verified test runner](../scripts/README-tests.md). Native functions run sequentially
+in separate processes, without retries or skipped assertions. A green exit without
+the complete xUnit evidence is rejected. The original grouped author/CI run did not
+finish ChatUI and is not full-suite evidence.
+
+#38 owns tab selection, workspace/root composition and transcript jump consumption. Use the ChatUI
+keys **Chat** and **Trajectory** for its tab labels. Mount the trajectory as its own full pane (tested
+at 400/1200 pt, 760 pt high), not the historical 144 pt auxiliary map column. Keep the trajectory and
+transcript mounted when hiding tabs, so local reader state and actual transcript geometry survive.
+A trajectory action calls only `navigation.jump(to: exactMessageID)`. #38 should observe that request
+to reveal Chat when appropriate; the trajectory does not set a tab or assume a target view is visible.
+The solid overview outline reflects only `navigation.viewport`'s real first/last stable IDs. Missing
+IDs show "Visible range unavailable"; a request/cursor never fabricates a measured viewport.
+
+The compact horizontal overview reuses `MinimapLayout`'s complete, text-weighted coordinates,
+binary stable-ID index and viewport projection. Left to right means **source message order**, not
+elapsed time. Input/User is blue with a circular legend, Assistant/Model purple with a square, and
+Tool/System amber with a diamond. Tool/System is a shared lane for actual `.tool`/`.system` messages,
+not an inferred tool-call stream. Missing lanes and empty role filters explicitly show their empty
+state. Shapes/labels and focus/target outlines carry meaning independently of color. Arrow keys,
+Page Up/Down, Home/End, Return/Space, Tab and native AX increment/decrement/press reach every ID,
+even when drawn intervals share a pixel. The dashed target and hover cursor are separate from the
+solid actual viewport. Dense pointer hits use the nearest original interval in the clicked role lane;
+empty lanes never manufacture a target.
+
+Below it, an NSTableView reuses bounded native cells for the entire ordered history, with original
+ordinal, localized role/status, actual creation date and a shortened plain-text/code preview. It never
+sorts by date or interprets/executes Markdown, paths or code. Search examines the **entire original
+content**, using case/diacritic-insensitive matching, and a native role popup filters actual roles.
+Selection, double click/Return jump, Command-C/full-copy and localized exact-number entry all retain
+the original message ID. The persistent selectable, scrollable plain-text inspector contains the full
+original message and its unmodified ID. Full copy includes code fences, whitespace and paths; it does
+not use the preview. The native cell's AX value also exposes the entire original content. A selected
+message hidden by a filter remains inspectable and actionable until removed or conversation-switched.
+
+Streaming never auto-scrolls the log or issues a jump. Updates anchor its top visible stable ID and
+pixel offset, preserve the native search editor/cursor, row selection, overview cursor, and original-text
+selection/scroll (clamping a range only if source replacement shortened it). Changing the selected
+conversation clears **local** search/filter/cursor/selection/reader state only. The component never
+calls `navigation.reset()`, writes `navigation.viewport`, changes store/model/draft, or sends backend
+commands. Delayed events for another conversation cannot replace the selected log. Language,
+appearance, increased contrast and Reduce Motion update the existing native controls in place.
+All movement is immediate; no spatial animation or progress/timing fiction is introduced.
+
+Only ChatMessage role/content/status/createdAt and stable identity are presented. UTF-8 byte counts
+in overview AX metadata are derived text sizes, not tokens or usage. No internal reasoning, missing
+tool records, durations, throughput, model calls, network actions or credentials are synthesized.
+
+Local #37 verification (2026-11-10, latest main `1219ca5` unioned): eight new focused tests passed
+with explicit per-test completion summaries, including six tests inside the unchanged serialized
+`NativeUITests` hierarchy. They cover 0/1/10,000 records, every dense AX step, native click/key events,
+exact-number jumps, private-pasteboard copy, full-content search and no matches, real roles/statuses,
+streaming reader/search/text-selection preservation, delayed other-conversation updates, local-only
+reset, missing IDs, live four-language/Light/Dark/increased-contrast updates and role-color contrast.
+The log/overview/controls use a centered maximum 760 pt reading width, keeping leading and trailing
+interaction targets visible even in a 1200 pt render host placed against a 1024 pt screen.
+
+The prescribed **one** full CLT/plugin run was bounded to 300 seconds and returned 0 after 73.4 seconds,
+but its ChatUI output ended at an existing PromptRail native test without a completion summary. This
+is **not a full-suite pass**. Focused multi-test runs showed the same premature-success exit;
+LLDB located it in `swift_task_asyncMainDrainQueue` via generated `test_entry_point`, without an
+Objective-C exception. Isolated focused native helper runs used the same built test bundle and CLT
+runtime library paths, retained all assertions, and each supplied its own successful summary. Parent
+CI remains the full-suite gate; no shared test serialization or assertion was relaxed to hide this.
+Own native PNGs and logs are ignored under `dist/qa/issue-37/`; 16 matrix images cover all four
+languages × Light/Dark × 400/1200 pt, with additional 10,000-record/search/absent-role states.
+These are synthetic native-host tests, not physical VoiceOver speech or IME certification. No reference
+attachment was copied, converted, embedded or committed. App tab/root wiring remains #38.
+
+Final strict source and packaged-resource audits passed for Common 10, ChatUI 130, Runtime 108,
+App 13 and Appearance 6 keys in all four languages, including exact Foundation lookup and the
+unchanged source-auditor rejection tests. Fresh release packaging and deep/strict ad-hoc signature
+verification passed. Final matrix rendering also asserts both leading search and trailing copy hit
+points inside an explicitly simulated 1024 pt placement frame and the actual `NSScreen.visibleFrame`;
+no missing-screen skip or relaxed edge assertion is used. `git diff --check` passed.

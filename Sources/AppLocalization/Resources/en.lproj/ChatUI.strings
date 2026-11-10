@@ -111,3 +111,26 @@
 "Each bar is a user input. The bright bar follows the transcript center. Hover previews the original input. Click, Up/Down, Home/End or Return jumps to an input. Tab leaves navigation." = "Each bar is a user input. The bright bar follows the transcript center. Hover previews the original input. Click, Up/Down, Home/End or Return jumps to an input. Tab leaves navigation.";
 "Showing inputs {first}–{last} of {total}. Scroll here or use Page Up/Down to browse every input." = "Showing inputs {first}–{last} of {total}. Scroll here or use Page Up/Down to browse every input.";
 "{count} user inputs. Transcript center unavailable." = "{count} user inputs. Transcript center unavailable.";
+
+/* Issue #37 trajectory and #38 tab labels. */
+"Chat" = "Chat";
+"Trajectory" = "Trajectory";
+"Search message text" = "Search message text";
+"Search the entire original text. Previews are shortened; select a row to read and copy the full message." = "Search the entire original text. Previews are shortened; select a row to read and copy the full message.";
+"All roles" = "All roles";
+"Filter by role" = "Filter by role";
+"Chronological message log" = "Chronological message log";
+"Select a row to read the original. Return jumps to its chat message. Command-C copies the whole message." = "Select a row to read the original. Return jumps to its chat message. Command-C copies the whole message.";
+"Original message, plain text" = "Original message, plain text";
+"Jump to message" = "Jump to message";
+"Copy the entire original message verbatim" = "Copy the entire original message verbatim";
+"{shown} of {total} messages" = "{shown} of {total} messages";
+"No messages for this role" = "No messages for this role";
+"No matching messages" = "No matching messages";
+"Select a message to inspect its original text" = "Select a message to inspect its original text";
+"Input / User" = "Input / User";
+"Assistant / Model" = "Assistant / Model";
+"Tool / System" = "Tool / System";
+"Earlier → Later · text-weighted order" = "Earlier → Later · text-weighted order";
+"Full-history role overview" = "Full-history role overview";
+"Left/Right or Up/Down navigate every message. Home/End reach the ends. Return repeats a jump. The solid outline is the actual chat viewport; the dashed line is your target. Tab leaves the overview." = "Left/Right or Up/Down navigate every message. Home/End reach the ends. Return repeats a jump. The solid outline is the actual chat viewport; the dashed line is your target. Tab leaves the overview.";

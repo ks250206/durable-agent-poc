@@ -15,10 +15,14 @@
     ],
     "ChatUI": [
       "All messages…",
+      "All roles",
       "All {count} messages",
       "Assistant",
+      "Assistant / Model",
       "Browse every message or jump to an exact message number",
+      "Chat",
       "Choose and configure a provider when runtime integration is installed.",
+      "Chronological message log",
       "Clear conversation search",
       "Code",
       "Complete",
@@ -36,6 +40,7 @@
       "Copy code",
       "Copy failed",
       "Copy message",
+      "Copy the entire original message verbatim",
       "Create and select a new conversation",
       "Creating…",
       "DEMO — read-only sample data",
@@ -46,16 +51,22 @@
       "Done",
       "DurableChat application shell",
       "Each bar is a user input. The bright bar follows the transcript center. Hover previews the original input. Click, Up/Down, Home/End or Return jumps to an input. Tab leaves navigation.",
+      "Earlier → Later · text-weighted order",
       "Empty message",
       "Enter / ⌘Enter to send · Shift+Enter for a new line\nConfirm IME composition before sending.",
       "Enter or Command+Enter sends committed text. Shift+Enter inserts a new line. Confirm IME composition before sending.",
       "Every message is included, from top (oldest) to bottom (newest). The four lanes show System, User, Assistant, and Tool messages. Height and width encode compressed UTF-8 text length, not measured transcript height. Very dense messages occupy subpixels.\n\nThe outlined band is the transcript’s visible range. The dotted line is the keyboard target; it can differ while a jump is pending. Click to jump. Up/Down, Page Up/Down, and Home/End jump through messages. Return or Space repeats a jump. Tab leaves the map. Open All messages for an accessible list and exact message-number navigation.",
       "Failed",
+      "Filter by role",
+      "Full-history role overview",
       "Go",
       "Hover to preview. Click to jump.\n↑ ↓ navigate · Home / End",
       "How can I help?",
+      "Input / User",
       "Jump to latest message",
+      "Jump to message",
       "Latest",
+      "Left/Right or Up/Down navigate every message. Home/End reach the ends. Return repeats a jump. The solid outline is the actual chat viewport; the dashed line is your target. Tab leaves the overview.",
       "Loading messages…",
       "Message",
       "Message number",
@@ -66,17 +77,24 @@
       "No backend connected",
       "No conversations yet",
       "No matches",
+      "No matching messages",
+      "No messages for this role",
       "No messages yet",
       "No model selected",
       "None",
+      "Original message, plain text",
       "Responding…",
       "Response failed",
       "Response in progress",
       "Response stopped",
       "Sample conversations. Sending and creating conversations are disabled.",
       "Search conversations",
+      "Search message text",
+      "Search the entire original text. Previews are shortened; select a row to read and copy the full message.",
       "Select a conversation",
       "Select a conversation or create a new one to get started.",
+      "Select a message to inspect its original text",
+      "Select a row to read the original. Return jumps to its chat message. Command-C copies the whole message.",
       "Selected model",
       "Send",
       "Sending…",
@@ -92,6 +110,8 @@
       "System",
       "Toggle conversations sidebar",
       "Tool",
+      "Tool / System",
+      "Trajectory",
       "Transcript overview",
       "Try another conversation title.",
       "Untitled conversation",
@@ -122,6 +142,7 @@
       "{number} · {role} · {bytes} bytes · {status}",
       "{number} · {role} · {status}",
       "{role} message",
+      "{shown} of {total} messages",
       "{title}. {detail}",
       "↵ Send · ⇧↵ New line"
     ],
@@ -4947,491 +4968,7 @@
         }
       }
     ],
-    "Sources/ChatUI/ConversationMinimap.swift": [
-      {
-        "prefix": "",
-        "literal": "\"bytes\"",
-        "count": 2,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "",
-        "literal": "\"current\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "",
-        "literal": "\"first\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "",
-        "literal": "\"number\"",
-        "count": 3,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "",
-        "literal": "\"preview\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "",
-        "literal": "\"role\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "",
-        "literal": "\"status\"",
-        "count": 4,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "",
-        "literal": "\"total\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "\"current\": .integer(index + 1),",
-        "literal": "\"total\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "\"first\": .integer(range.lowerBound + 1),",
-        "literal": "\"last\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "\"number\": .integer(index + 1),",
-        "literal": "\"role\"",
-        "count": 3,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "\"role\": .string(localizer.role(node.role)),",
-        "literal": "\"bytes\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": ".accessibilityIdentifier(",
-        "literal": "\"minimap.preview\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": ".accessibilityIdentifier(",
-        "literal": "\"minimap.viewport\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": ".accessibilityLabel(localization.chat(",
-        "literal": "\"Message number\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Message number"
-          ]
-        }
-      },
-      {
-        "prefix": ".buttonStyle(.plain).accessibilityLabel(localization.chat(",
-        "literal": "\"Conversation map help\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Conversation map help"
-          ]
-        }
-      },
-      {
-        "prefix": ".help(localization.chat(",
-        "literal": "\"Browse every message or jump to an exact message number\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Browse every message or jump to an exact message number"
-          ]
-        }
-      },
-      {
-        "prefix": ": (store.selectedConversation == nil ? localization.chat(",
-        "literal": "\"Loading messages…\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Loading messages…"
-          ]
-        }
-      },
-      {
-        "prefix": ": (store.selectedConversation == nil ? localization.chat(\"Loading messages…\") : localization.chat(",
-        "literal": "\"No messages yet\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "No messages yet"
-          ]
-        }
-      },
-      {
-        "prefix": "? localization.chat(",
-        "literal": "\"Select a conversation\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Select a conversation"
-          ]
-        }
-      },
-      {
-        "prefix": "@MinimapState private var messageNumber =",
-        "literal": "\"\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "Button(localization.chat(",
-        "literal": "\"Done\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Done"
-          ]
-        }
-      },
-      {
-        "prefix": "Button(localization.chat(",
-        "literal": "\"Go\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Go"
-          ]
-        }
-      },
-      {
-        "prefix": "Image(systemName:",
-        "literal": "\"questionmark.circle\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "Image(systemName:",
-        "literal": "\"text.bubble\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "Label(localization.chat(",
-        "literal": "\"All messages…\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "All messages…"
-          ]
-        }
-      },
-      {
-        "prefix": "Label(localization.chat(\"All messages…\"), systemImage:",
-        "literal": "\"list.bullet\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "Text(localization.chat(",
-        "literal": "\"Conversation map\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Conversation map"
-          ]
-        }
-      },
-      {
-        "prefix": "Text(localization.chat(",
-        "literal": "\"Hover to preview. Click to jump.\\n↑ ↓ navigate · Home / End\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Hover to preview. Click to jump.\n↑ ↓ navigate · Home / End"
-          ]
-        }
-      },
-      {
-        "prefix": "Text(message.content.isEmpty ? localization.chat(",
-        "literal": "\"Empty message\"",
-        "count": 2,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Empty message"
-          ]
-        }
-      },
-      {
-        "prefix": "Text(verbatim: localization.chat(",
-        "literal": "\"Every message is included, from top (oldest) to bottom (newest). The four lanes show System, User, Assistant, and Tool messages. Height and width encode compressed UTF-8 text length, not measured transcript height. Very dense messages occupy subpixels.\\n\\nThe outlined band is the transcript’s visible range. The dotted line is the keyboard target; it can differ while a jump is pending. Click to jump. Up/Down, Page Up/Down, and Home/End jump through messages. Return or Space repeats a jump. Tab leaves the map. Open All messages for an accessible list and exact message-number navigation.\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Every message is included, from top (oldest) to bottom (newest). The four lanes show System, User, Assistant, and Tool messages. Height and width encode compressed UTF-8 text length, not measured transcript height. Very dense messages occupy subpixels.\n\nThe outlined band is the transcript’s visible range. The dotted line is the keyboard target; it can differ while a jump is pending. Click to jump. Up/Down, Page Up/Down, and Home/End jump through messages. Return or Space repeats a jump. Tab leaves the map. Open All messages for an accessible list and exact message-number navigation."
-          ]
-        }
-      },
-      {
-        "prefix": "Text(verbatim: localization.chatCount(messages.count, one:",
-        "literal": "\"{count} message in total\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "{count} message in total"
-          ]
-        }
-      },
-      {
-        "prefix": "Text(verbatim: localization.chatCount(messages.count, one:",
-        "literal": "\"{count} message · entire history\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "{count} message · entire history"
-          ]
-        }
-      },
-      {
-        "prefix": "Text(verbatim: localization.chatCount(messages.count, one: \"{count} message in total\", other:",
-        "literal": "\"All {count} messages\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "All {count} messages"
-          ]
-        }
-      },
-      {
-        "prefix": "Text(verbatim: localization.chatCount(messages.count, one: \"{count} message · entire history\", other:",
-        "literal": "\"{count} messages · entire history\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "{count} messages · entire history"
-          ]
-        }
-      },
-      {
-        "prefix": "TextField(localization.chat(",
-        "literal": "\"Message number (1–{count})\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Message number (1–{count})"
-          ]
-        }
-      },
-      {
-        "prefix": "TextField(localization.chat(\"Message number (1–{count})\", [",
-        "literal": "\"count\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "guard let range = layout.visibleIndices(navigation.viewport) else { return localization.chat(",
-        "literal": "\"Visible range unavailable\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Visible range unavailable"
-          ]
-        }
-      },
-      {
-        "prefix": "localization.chat(",
-        "literal": "\"Message {number}, {role}, {bytes} UTF-8 bytes, {status}. {preview}\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Message {number}, {role}, {bytes} UTF-8 bytes, {status}. {preview}"
-          ]
-        }
-      },
-      {
-        "prefix": "localization.chat(",
-        "literal": "\"{number} · {role} · {bytes} bytes · {status}\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "{number} · {role} · {bytes} bytes · {status}"
-          ]
-        }
-      },
-      {
-        "prefix": "localization.chat(",
-        "literal": "\"{number} · {role} · {status}\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "{number} · {role} · {status}"
-          ]
-        }
-      },
-      {
-        "prefix": "localizer.chat(",
-        "literal": "\"Message {current} of {total}, {role}, {bytes} UTF-8 bytes, {status}\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Message {current} of {total}, {role}, {bytes} UTF-8 bytes, {status}"
-          ]
-        }
-      },
-      {
-        "prefix": "required init?(coder: NSCoder) { fatalError(",
-        "literal": "\"init(coder:) has not been implemented\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "return localization.chat(",
-        "literal": "\"Viewing {first}–{last} of {total}\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Viewing {first}–{last} of {total}"
-          ]
-        }
-      },
-      {
-        "prefix": "setAccessibilityHelp(localizer.chat(",
-        "literal": "\"Up and Down navigate every message. Home and End jump to the ends. Return repeats a jump. Use All messages for individual messages and exact message numbers.\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Up and Down navigate every message. Home and End jump to the ends. Return repeats a jump. Use All messages for individual messages and exact message numbers."
-          ]
-        }
-      },
-      {
-        "prefix": "setAccessibilityIdentifier(",
-        "literal": "\"minimap.navigation\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "setAccessibilityLabel(localizer.chat(",
-        "literal": "\"Conversation map\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Conversation map"
-          ]
-        }
-      },
-      {
-        "prefix": "setAccessibilityValue(localizer.chatCount(layout.nodes.count, one:",
-        "literal": "\"{count} message. Visible range unavailable.\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "{count} message. Visible range unavailable."
-          ]
-        }
-      },
-      {
-        "prefix": "setAccessibilityValue(localizer.chatCount(layout.nodes.count, one: \"{count} message. Visible range unavailable.\", other:",
-        "literal": "\"{count} messages. Visible range unavailable.\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "{count} messages. Visible range unavailable."
-          ]
-        }
-      }
-    ],
+    "Sources/ChatUI/ConversationMinimap.swift": [],
     "Sources/ChatUI/ConversationSidebar.swift": [
       {
         "prefix": ".accessibilityIdentifier(",
@@ -7169,6 +6706,813 @@
         }
       }
     ],
+    "Sources/DurableChatApp/NativeAppearanceRoot.swift": [],
+    "Sources/ChatUI/ConversationTrajectory.swift": [
+      {
+        "prefix": "let title = NSTextField(labelWithString:",
+        "literal": "\"\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "let countLabel = NSTextField(labelWithString:",
+        "literal": "\"\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "let viewportLabel = NSTextField(labelWithString:",
+        "literal": "\"\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "let resultLabel = NSTextField(labelWithString:",
+        "literal": "\"\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "let emptyLabel = NSTextField(wrappingLabelWithString:",
+        "literal": "\"\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "let detailLabel = NSTextField(labelWithString:",
+        "literal": "\"\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "search.setAccessibilityIdentifier(",
+        "literal": "\"trajectory.search\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "numberField.setAccessibilityIdentifier(",
+        "literal": "\"trajectory.number\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "roleFilter.setAccessibilityIdentifier(",
+        "literal": "\"trajectory.role\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(",
+        "literal": "\"message\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "table.setAccessibilityIdentifier(",
+        "literal": "\"trajectory.log\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "detail.setAccessibilityIdentifier(",
+        "literal": "\"trajectory.original\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "required init?(coder: NSCoder) { fatalError(",
+        "literal": "\"init(coder:) has not been implemented\"",
+        "count": 2,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "search.stringValue =",
+        "literal": "\"\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "numberField.stringValue =",
+        "literal": "\"\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "detail.string =",
+        "literal": "\"\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "viewportLabel.stringValue = localizer.chat(",
+        "literal": "\"Viewing {first}–{last} of {total}\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Viewing {first}–{last} of {total}"
+          ]
+        }
+      },
+      {
+        "prefix": "",
+        "literal": "\"first\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "\"first\": .integer(range.lowerBound + 1),",
+        "literal": "\"last\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "\"first\": .integer(range.lowerBound + 1), \"last\": .integer(range.upperBound + 1),",
+        "literal": "\"total\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "} else { viewportLabel.stringValue = localizer.chat(",
+        "literal": "\"Visible range unavailable\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Visible range unavailable"
+          ]
+        }
+      },
+      {
+        "prefix": "title.stringValue = localizer.chat(",
+        "literal": "\"Trajectory\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Trajectory"
+          ]
+        }
+      },
+      {
+        "prefix": "search.placeholderString = localizer.chat(",
+        "literal": "\"Search message text\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Search message text"
+          ]
+        }
+      },
+      {
+        "prefix": "search.setAccessibilityLabel(localizer.chat(",
+        "literal": "\"Search message text\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Search message text"
+          ]
+        }
+      },
+      {
+        "prefix": "search.toolTip = localizer.chat(",
+        "literal": "\"Search the entire original text. Previews are shortened; select a row to read and copy the full message.\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Search the entire original text. Previews are shortened; select a row to read and copy the full message."
+          ]
+        }
+      },
+      {
+        "prefix": "roleFilter.addItem(withTitle: localizer.chat(",
+        "literal": "\"All roles\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "All roles"
+          ]
+        }
+      },
+      {
+        "prefix": "numberField.placeholderString = localizer.chat(",
+        "literal": "\"Message number\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Message number"
+          ]
+        }
+      },
+      {
+        "prefix": "numberField.setAccessibilityLabel(localizer.chat(",
+        "literal": "\"Message number\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Message number"
+          ]
+        }
+      },
+      {
+        "prefix": "numberField.toolTip = localizer.chat(",
+        "literal": "\"Message number (1–{count})\"",
+        "count": 2,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Message number (1–{count})"
+          ]
+        }
+      },
+      {
+        "prefix": "numberField.toolTip = localizer.chat(\"Message number (1–{count})\", [",
+        "literal": "\"count\"",
+        "count": 2,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "goButton.title = localizer.chat(",
+        "literal": "\"Go\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Go"
+          ]
+        }
+      },
+      {
+        "prefix": "roleFilter.setAccessibilityLabel(localizer.chat(",
+        "literal": "\"Filter by role\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Filter by role"
+          ]
+        }
+      },
+      {
+        "prefix": "table.setAccessibilityLabel(localizer.chat(",
+        "literal": "\"Chronological message log\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Chronological message log"
+          ]
+        }
+      },
+      {
+        "prefix": "table.setAccessibilityHelp(localizer.chat(",
+        "literal": "\"Select a row to read the original. Return jumps to its chat message. Command-C copies the whole message.\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Select a row to read the original. Return jumps to its chat message. Command-C copies the whole message."
+          ]
+        }
+      },
+      {
+        "prefix": "detail.setAccessibilityLabel(localizer.chat(",
+        "literal": "\"Original message, plain text\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Original message, plain text"
+          ]
+        }
+      },
+      {
+        "prefix": "jumpButton.title = localizer.chat(",
+        "literal": "\"Jump to message\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Jump to message"
+          ]
+        }
+      },
+      {
+        "prefix": "copyButton.title = localizer.chat(",
+        "literal": "\"Copy message\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Copy message"
+          ]
+        }
+      },
+      {
+        "prefix": "copyButton.toolTip = localizer.chat(",
+        "literal": "\"Copy the entire original message verbatim\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Copy the entire original message verbatim"
+          ]
+        }
+      },
+      {
+        "prefix": "countLabel.stringValue = localizer.chatCount(messages.count, one:",
+        "literal": "\"{count} message · entire history\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "{count} message · entire history"
+          ]
+        }
+      },
+      {
+        "prefix": "countLabel.stringValue = localizer.chatCount(messages.count, one: \"{count} message · entire history\", other:",
+        "literal": "\"{count} messages · entire history\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "{count} messages · entire history"
+          ]
+        }
+      },
+      {
+        "prefix": "resultLabel.stringValue = localizer.chat(",
+        "literal": "\"{shown} of {total} messages\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "{shown} of {total} messages"
+          ]
+        }
+      },
+      {
+        "prefix": "resultLabel.stringValue = localizer.chat(\"{shown} of {total} messages\", [",
+        "literal": "\"shown\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "resultLabel.stringValue = localizer.chat(\"{shown} of {total} messages\", [\"shown\": .integer(filtered.count),",
+        "literal": "\"total\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "emptyLabel.stringValue = localizer.chat(conversationID == nil ?",
+        "literal": "\"Select a conversation\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Select a conversation"
+          ]
+        }
+      },
+      {
+        "prefix": "emptyLabel.stringValue = localizer.chat(conversationID == nil ? \"Select a conversation\" : (loaded ?",
+        "literal": "\"No messages yet\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "No messages yet"
+          ]
+        }
+      },
+      {
+        "prefix": "emptyLabel.stringValue = localizer.chat(conversationID == nil ? \"Select a conversation\" : (loaded ? \"No messages yet\" :",
+        "literal": "\"Loading messages…\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Loading messages…"
+          ]
+        }
+      },
+      {
+        "prefix": "emptyLabel.stringValue = localizer.chat(selectedRole != nil && search.stringValue.isEmpty ?",
+        "literal": "\"No messages for this role\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "No messages for this role"
+          ]
+        }
+      },
+      {
+        "prefix": "emptyLabel.stringValue = localizer.chat(selectedRole != nil && search.stringValue.isEmpty ? \"No messages for this role\" :",
+        "literal": "\"No matching messages\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "No matching messages"
+          ]
+        }
+      },
+      {
+        "prefix": "let id = NSUserInterfaceItemIdentifier(",
+        "literal": "\"trajectory.cell\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "let content = message?.content ??",
+        "literal": "\"\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "detailLabel.stringValue = message.map { $0.id.rawValue } ?? localizer.chat(",
+        "literal": "\"Select a message to inspect its original text\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Select a message to inspect its original text"
+          ]
+        }
+      },
+      {
+        "prefix": "copyButton.title = localizer.chat(copiedID != nil ?",
+        "literal": "\"Copied\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Copied"
+          ]
+        }
+      },
+      {
+        "prefix": "copyButton.title = localizer.chat(copiedID != nil ? \"Copied\" :",
+        "literal": "\"Copy message\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Copy message"
+          ]
+        }
+      },
+      {
+        "prefix": "copyButton.title = localizer.chat(success ?",
+        "literal": "\"Copied\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Copied"
+          ]
+        }
+      },
+      {
+        "prefix": "copyButton.title = localizer.chat(success ? \"Copied\" :",
+        "literal": "\"Copy failed\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Copy failed"
+          ]
+        }
+      },
+      {
+        "prefix": "if event.modifierFlags.contains(.command), event.charactersIgnoringModifiers ==",
+        "literal": "\"c\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "private let metadata = NSTextField(labelWithString:",
+        "literal": "\"\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "private let preview = NSTextField(wrappingLabelWithString:",
+        "literal": "\"\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "let header = localizer.chat(",
+        "literal": "\"{number} · {role} · {status}\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "{number} · {role} · {status}"
+          ]
+        }
+      },
+      {
+        "prefix": "let header = localizer.chat(\"{number} · {role} · {status}\", [",
+        "literal": "\"number\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "",
+        "literal": "\"role\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "\"role\": .string(localizer.role(message.role)),",
+        "literal": "\"status\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "metadata.stringValue = header +",
+        "literal": "\"  ·  \"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "let code = message.content.contains(",
+        "literal": "\"```\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "preview.stringValue = message.content.isEmpty ? localizer.chat(",
+        "literal": "\"Empty message\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Empty message"
+          ]
+        }
+      },
+      {
+        "prefix": "setAccessibilityValue(message.content.isEmpty ? localizer.chat(",
+        "literal": "\"Empty message\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Empty message"
+          ]
+        }
+      },
+      {
+        "prefix": "toolTip = localizer.chat(",
+        "literal": "\"Select a row to read the original. Return jumps to its chat message. Command-C copies the whole message.\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Select a row to read the original. Return jumps to its chat message. Command-C copies the whole message."
+          ]
+        }
+      }
+    ],
+    "Sources/ChatUI/TrajectoryIndex.swift": [],
+    "Sources/ChatUI/TrajectoryOverview.swift": [
+      {
+        "prefix": "setAccessibilityIdentifier(",
+        "literal": "\"trajectory.overview\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "required init?(coder: NSCoder) { fatalError(",
+        "literal": "\"init(coder:) has not been implemented\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "let labels = [localizer.chat(",
+        "literal": "\"Input / User\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Input / User"
+          ]
+        }
+      },
+      {
+        "prefix": "let labels = [localizer.chat(\"Input / User\"), localizer.chat(",
+        "literal": "\"Assistant / Model\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Assistant / Model"
+          ]
+        }
+      },
+      {
+        "prefix": "let labels = [localizer.chat(\"Input / User\"), localizer.chat(\"Assistant / Model\"), localizer.chat(",
+        "literal": "\"Tool / System\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Tool / System"
+          ]
+        }
+      },
+      {
+        "prefix": "drawText(localizer.chat(",
+        "literal": "\"No messages for this role\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "No messages for this role"
+          ]
+        }
+      },
+      {
+        "prefix": "drawText(localizer.chat(",
+        "literal": "\"Earlier → Later · text-weighted order\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Earlier → Later · text-weighted order"
+          ]
+        }
+      },
+      {
+        "prefix": "return localizer.chat(",
+        "literal": "\"Message {current} of {total}, {role}, {bytes} UTF-8 bytes, {status}\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Message {current} of {total}, {role}, {bytes} UTF-8 bytes, {status}"
+          ]
+        }
+      },
+      {
+        "prefix": "",
+        "literal": "\"current\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "\"current\": .integer(index + 1),",
+        "literal": "\"total\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "\"current\": .integer(index + 1), \"total\": .integer(layout.nodes.count),",
+        "literal": "\"role\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "",
+        "literal": "\"bytes\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "\"bytes\": .integer(node.byteCount),",
+        "literal": "\"status\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R10"
+      },
+      {
+        "prefix": "setAccessibilityLabel(localizer.chat(",
+        "literal": "\"Full-history role overview\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Full-history role overview"
+          ]
+        }
+      },
+      {
+        "prefix": "setAccessibilityHelp(localizer.chat(",
+        "literal": "\"Left/Right or Up/Down navigate every message. Home/End reach the ends. Return repeats a jump. The solid outline is the actual chat viewport; the dashed line is your target. Tab leaves the overview.\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "Left/Right or Up/Down navigate every message. Home/End reach the ends. Return repeats a jump. The solid outline is the actual chat viewport; the dashed line is your target. Tab leaves the overview."
+          ]
+        }
+      },
+      {
+        "prefix": "setAccessibilityValue(layout.nodes.indices.contains(currentIndex) ? value(currentIndex) : localizer.chat(",
+        "literal": "\"No messages yet\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R10",
+        "keys": {
+          "ChatUI": [
+            "No messages yet"
+          ]
+        }
+      }
+    ],
     "Sources/ChatUI/MessageMarkdown.swift": [
       {
         "prefix": "[",
@@ -7352,8 +7696,7 @@
         "kind": "allowlisted",
         "reason": "R7"
       }
-    ],
-    "Sources/DurableChatApp/NativeAppearanceRoot.swift": []
+    ]
   },
   "reservedKeys": {
     "Common": {
@@ -7369,7 +7712,21 @@
       "{count} sample conversation": "Legacy shell label retained for localization compatibility; the shell now delegates to the functional workspace.",
       "{count} sample conversations": "Legacy shell label retained for localization compatibility; the shell now delegates to the functional workspace.",
       "{count} sample message": "Legacy shell label retained for localization compatibility; the shell now delegates to the functional workspace.",
-      "{count} sample messages": "Legacy shell label retained for localization compatibility; the shell now delegates to the functional workspace."
+      "{count} sample messages": "Legacy shell label retained for localization compatibility; the shell now delegates to the functional workspace.",
+      "All messages…": "Legacy #6 minimap resource retained for compatibility; its vertical map/sheet is retired by #37, and this key is not displayed by the trajectory.",
+      "All {count} messages": "Legacy #6 minimap resource retained for compatibility; its vertical map/sheet is retired by #37, and this key is not displayed by the trajectory.",
+      "Browse every message or jump to an exact message number": "Legacy #6 minimap resource retained for compatibility; its vertical map/sheet is retired by #37, and this key is not displayed by the trajectory.",
+      "Chat": "Issue #38 owns the application Chat/Trajectory tab switch; component provides the translated label.",
+      "Conversation map": "Legacy #6 minimap resource retained for compatibility; its vertical map/sheet is retired by #37, and this key is not displayed by the trajectory.",
+      "Conversation map help": "Legacy #6 minimap resource retained for compatibility; its vertical map/sheet is retired by #37, and this key is not displayed by the trajectory.",
+      "Every message is included, from top (oldest) to bottom (newest). The four lanes show System, User, Assistant, and Tool messages. Height and width encode compressed UTF-8 text length, not measured transcript height. Very dense messages occupy subpixels.\n\nThe outlined band is the transcript’s visible range. The dotted line is the keyboard target; it can differ while a jump is pending. Click to jump. Up/Down, Page Up/Down, and Home/End jump through messages. Return or Space repeats a jump. Tab leaves the map. Open All messages for an accessible list and exact message-number navigation.": "Legacy #6 minimap resource retained for compatibility; its vertical map/sheet is retired by #37, and this key is not displayed by the trajectory.",
+      "Hover to preview. Click to jump.\n↑ ↓ navigate · Home / End": "Legacy #6 minimap resource retained for compatibility; its vertical map/sheet is retired by #37, and this key is not displayed by the trajectory.",
+      "Message {number}, {role}, {bytes} UTF-8 bytes, {status}. {preview}": "Legacy #6 minimap resource retained for compatibility; its vertical map/sheet is retired by #37, and this key is not displayed by the trajectory.",
+      "Up and Down navigate every message. Home and End jump to the ends. Return repeats a jump. Use All messages for individual messages and exact message numbers.": "Legacy #6 minimap resource retained for compatibility; its vertical map/sheet is retired by #37, and this key is not displayed by the trajectory.",
+      "{count} message in total": "Legacy #6 minimap resource retained for compatibility; its vertical map/sheet is retired by #37, and this key is not displayed by the trajectory.",
+      "{count} message. Visible range unavailable.": "Legacy #6 minimap resource retained for compatibility; its vertical map/sheet is retired by #37, and this key is not displayed by the trajectory.",
+      "{count} messages. Visible range unavailable.": "Legacy #6 minimap resource retained for compatibility; its vertical map/sheet is retired by #37, and this key is not displayed by the trajectory.",
+      "{number} · {role} · {bytes} bytes · {status}": "Legacy #6 minimap resource retained for compatibility; its vertical map/sheet is retired by #37, and this key is not displayed by the trajectory."
     }
   },
   "reasons": {
@@ -7381,6 +7738,7 @@
     "R6": "Canonical English diagnostic sources linked to Runtime; other literals are stable IDs, operations or model/provider data, not presentation keys.",
     "R7": "Verbatim transcript/model/code data, symbols, accessibility identifiers, key equivalents and parsing delimiters; presentation and AX prose are explicitly linked to ChatUI.",
     "R8": "App-owned presentation linked to App/Runtime; other literals are nonsecret storage/fixture/protocol data and stable identifiers. Simulated transcripts stay verbatim.",
-    "R9": "Appearance-owned labels/help and explicit dynamic choice keys are linked to Appearance. Other literals are canonical nonsecret preference/table identifiers, never display labels."
+    "R9": "Appearance-owned labels/help and explicit dynamic choice keys are linked to Appearance. Other literals are canonical nonsecret preference/table identifiers, never display labels.",
+    "R10": "Trajectory app-owned labels and AX prose link to ChatUI. Non-presentation sites are explicitly reviewed empty initial values, placeholder names, stable native view IDs, code-fence detection, keyboard equivalents and inert developer diagnostics. Original transcript content is never localized."
   }
 }

@@ -15,6 +15,7 @@ struct MinimapLayout {
 
     let nodes: [Node]
     private let indices: [MessageID: Int]
+    private let trajectoryLanes: [[Int]]
 
     init(messages: [ChatMessage]) {
         let lengths = messages.map { $0.content.utf8.count }
@@ -33,6 +34,7 @@ struct MinimapLayout {
             )
         }
         indices = Dictionary(uniqueKeysWithValues: messages.enumerated().map { ($0.element.id, $0.offset) })
+        trajectoryLanes = (0..<3).map { lane in messages.indices.filter { Self.trajectoryLane(messages[$0].role) == lane } }
     }
 
     func index(for id: MessageID?) -> Int? { id.flatMap { indices[$0] } }
@@ -78,6 +80,46 @@ struct MinimapLayout {
             x: inset + lane * laneWidth, y: node.start * size.height,
             width: width, height: (node.end - node.start) * size.height
         )
+    }
+
+    static func trajectoryLane(_ role: MessageRole) -> Int {
+        switch role { case .user: 0; case .assistant: 1; case .tool, .system: 2 }
+    }
+
+    func trajectoryRect(for index: Int, plot: CGRect) -> CGRect {
+        guard nodes.indices.contains(index), valid(plot.size) else { return .zero }
+        let node = nodes[index]
+        let x = plot.minX + node.start * plot.width
+        let width = min(plot.width, max(1, (node.end - node.start) * plot.width))
+        return CGRect(x: min(x, plot.maxX - width), y: plot.minY + CGFloat(Self.trajectoryLane(node.role)) * 26 + 5,
+                      width: width, height: 13)
+    }
+
+    func trajectoryViewportRect(_ viewport: TranscriptViewport, plot: CGRect) -> CGRect? {
+        guard let vertical = viewportRect(viewport, size: CGSize(width: plot.height, height: plot.width)) else { return nil }
+        return CGRect(x: plot.minX + vertical.minY, y: plot.minY, width: vertical.height, height: plot.height)
+    }
+
+    /// Nearest original interval in the clicked lane; absent roles never generate a target.
+    func trajectoryIndex(at point: CGPoint, plot: CGRect) -> Int? {
+        guard valid(plot.size), plot.contains(point) else { return nil }
+        let lane = Int((point.y - plot.minY) / 26)
+        let fraction = (point.x - plot.minX) / plot.width
+        guard trajectoryLanes.indices.contains(lane), !trajectoryLanes[lane].isEmpty else { return nil }
+        let candidates = trajectoryLanes[lane]
+        var low = 0
+        var high = candidates.count
+        while low < high {
+            let mid = low + (high - low) / 2
+            if nodes[candidates[mid]].end < fraction { low = mid + 1 } else { high = mid }
+        }
+        let after = min(low, candidates.count - 1)
+        let before = max(0, after - 1)
+        func distance(_ ordinal: Int) -> Double {
+            let node = nodes[candidates[ordinal]]
+            return max(node.start - fraction, fraction - node.end, 0)
+        }
+        return candidates[distance(before) <= distance(after) ? before : after]
     }
 
     private func valid(_ size: CGSize) -> Bool {
