@@ -2,13 +2,16 @@ import ChatCore
 import Foundation
 import Observation
 
-/// #4 reports first/last visible stable IDs; #6 uses the range to draw its viewport.
+/// Measured row IDs in the transcript's actual viewport, independent of message counts.
 public struct TranscriptViewport: Equatable, Sendable {
     public var firstVisibleMessageID: MessageID?
     public var lastVisibleMessageID: MessageID?
-    public init(firstVisibleMessageID: MessageID? = nil, lastVisibleMessageID: MessageID? = nil) {
+    public var centerVisibleMessageID: MessageID?
+    public init(firstVisibleMessageID: MessageID? = nil, lastVisibleMessageID: MessageID? = nil,
+                centerVisibleMessageID: MessageID? = nil) {
         self.firstVisibleMessageID = firstVisibleMessageID
         self.lastVisibleMessageID = lastVisibleMessageID
+        self.centerVisibleMessageID = centerVisibleMessageID
     }
 }
 
