@@ -189,6 +189,63 @@ switch and ignore jump IDs missing from that transcript. #5 binds its text to `$
 `isSending`/`canSend`, and calls `sendDraft()` only after IME validation; stop uses `store.stop()`.
 No IME behavior or minimap layout has been implemented by #3.
 
+## Issue #36 standalone prompt rail handoff (application wiring: #38)
+
+`@MainActor public PromptRail(store: ChatStore, navigation: TranscriptNavigation): View` is a new
+standalone component. Supply the **same instances** as `TranscriptView`; the owner still starts
+`store.start()` once. It does not replace or modify `ConversationMinimap`, install a workspace,
+or alter the composer, message rows, appearance settings or runtime. It uses semantic native label
+colors and the standard accent for keyboard focus, without a dependency on future #32 tokens.
+
+The rail has a default fixed **40 pt width**, transparent background, 12 pt vertical input cells,
+and neutral horizontal bars of 10 pt (ordinary), 22 pt (current) and 28 pt (hover). A trailing overlay
+is supported; #38 must reserve trailing reading space so the fixed hit strip does not cover text,
+and keep Latest/other controls outside that strip. Animated widths do not change hit cells, borders,
+bar anchors or transcript layout. Reduce Motion suppresses/removes width animations.
+
+`TranscriptViewport` adds mutable `centerVisibleMessageID: MessageID?` as the final initializer
+argument, **default nil**. Existing `TranscriptViewport()`, two-argument initializers, public first/last
+properties, `jump(to:)`, repeated jump requests and `reset()` remain source compatible. TranscriptView
+reports the measured row interval containing the actual viewport midpoint, including a row larger
+than the viewport; in a spacing gap it selects the nearest visible row (earlier on ties). The rail
+uses the preceding-or-equal user input in complete transcript order. It never estimates center from
+first/last indices or content length. A nil/missing center or a center before the first user has no
+current bar. Standalone consumers that manually set viewport must supply the new center for highlighting.
+
+Every user input and every message-to-preceding-user association is retained by stable ID. Dense
+histories use an explicit scrollable **window of full-sized cells**, never silent truncation or
+unselectable subpixels. Top/bottom chevrons page that window; wheel scrolling over the rail browses
+it without moving the transcript. AX help announces the exact shown range/total. Up/Down, Page
+Up/Down, Home/End and AX increment/decrement reach every input and jump to its exact user ID;
+Return/Space/AX press repeat a jump. Tab/Shift-Tab leave the single native roving focus participant.
+Its AX value includes the ordinal, total and **entire original input text**. The keyboard cursor and
+hover are independent of the measured current turn; only actual transcript measurement changes that
+highlight. Manual transcript scrolling returns keyboard navigation to the measured turn and reveals
+it in the rail. Streaming updates never issue a jump or change the reader's scroll position.
+
+Hover uses a bounded native popover containing selectable, scrollable, read-only plain text, verbatim
+including whitespace/Markdown-looking content. AppKit positions it against screen edges; it is a
+separate window and does not enlarge the rail or overlap its hit strip. Exiting a cell clears only
+hover immediately. A short dismissal grace allows entering/scrolling/selecting the popover; leaving
+both dismisses it. Escape dismisses it too. Conversation changes clear local hover/cursor/window
+and stale requests; a sibling's already-valid new center report is retained. Removing IDs clears
+their stale state. Language/appearance updates keep the same native key-view participant and do not
+remount store, navigation, transcript or editors. Five new ChatUI keys belong only to #36, in all four
+locales and both audited inventories; #32 retains ownership of Appearance resources.
+
+Local verification on 2026-11-10 after incorporating main `dbc753e`: **147 tests passed**, including
+8 new rail tests (all 5 native rail tests use the existing serialized suite). Coverage includes 0/1/10,000 inputs and
+every AX step, fixed hover hit cells, multiline raw-text popovers/AX/Escape, huge assistant rows,
+manual scrolling/streaming/reset/missing IDs, unchanged native identity/focus across four languages
+and appearance changes, Reduce Motion, and at least 3:1 native bar contrast in Light/Dark and
+increased contrast. Real transcript + rail hosts were rendered at 400/1200 pt in all four languages
+and Light/Dark; component PNGs/logs are opt-in under ignored `dist/qa/issue-36/`. The full command
+was bounded to 270 seconds and finished normally. Existing IME/undo/native tests remain intact.
+Source and packaged resource audits passed with ChatUI 109 keys in all four locales, including exact
+Foundation lookups; release packaging and deep/strict ad-hoc signature verification passed.
+This is synthetic native hosting evidence; physical VoiceOver/IME and final app wiring remain
+outside this component change. Remote CI and independent review must be read separately.
+
 ## Runtime/app composition (`import AgentRuntime`; #9 replaces)
 
 `ShellLaunchMode: Equatable, Sendable` cases `.empty`, `.demo`; `init(arguments: [String])` checks only

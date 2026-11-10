@@ -4,7 +4,8 @@ Run `scripts/validate-localization.sh`, then `scripts/build-app.sh`, then
 `scripts/validate-localization.sh dist/DurableChat.app`. Uses the selected Swift toolchain and
 Python 3 standard library only. Neither command launches the app or accesses accounts.
 
-`inventory.json` reuses the audited #20/#22/#23 inventories: Common 10, ChatUI 104, Runtime 108,
+`inventory.json` extends the audited #20/#22/#23 inventories with #36's five ChatUI rail keys:
+Common 10, ChatUI 109, Runtime 108,
 App 13 keys. Its source section accounts for **every Swift string site in Sources**, including
 nested interpolation, raw/multiline strings, dynamic branches, AX help, canonical diagnostics,
 wire/ID/symbol/path data and fixture/verbatim transcript exceptions. Site prefixes and occurrence

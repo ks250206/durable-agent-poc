@@ -1,10 +1,18 @@
 # Four-language localization
 
 The current application shares one observable language owner across workspace, settings and app-owned
-commands. All four tables live in one AppLocalization bundle: **Common 10, ChatUI 104, Runtime 108,
+commands. All four tables live in one AppLocalization bundle: **Common 10, ChatUI 109, Runtime 108,
 App 13 keys per locale** (en, ja, zh-Hans, ko). #20 introduced the foundation, #22 translated ChatUI,
 and #23 connected Runtime/App presentation; #24 adds the repository-wide audit and CI/package gates.
 ChatCore stays independent of localization. The runtime protocols and credential boundary are unchanged.
+
+Issue #36 adds five ChatUI keys for the standalone `PromptRail` label, ordinal, keyboard/hover
+instructions, explicit dense-window range, and unavailable-center count. Both
+`Tests/ChatUITests/LocalizationTests.swift` and `scripts/localization/inventory.json` register these
+exact keys. New source literals are individually classified; source/resource validators remain fail
+closed. Original input text in the native popover/AX value is verbatim data, never a translation key
+or shortened preview. Common/Runtime/App and #32 Appearance ownership are unchanged. See the #36
+handoff in SharedContracts.md for center measurement and integration details.
 
 Run `scripts/validate-localization.sh` for the source inventory and tables, then
 `scripts/validate-localization.sh dist/DurableChat.app` for the actual copied/compiled resource bundle.
