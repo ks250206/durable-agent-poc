@@ -1,0 +1,11 @@
+/* 日本語。アプリ内の識別子は ja-JP、リソースは ja。 */
+"Language" = "言語";
+"System" = "システム設定に従う";
+"English" = "英語";
+"Japanese" = "日本語";
+"Chinese (Simplified)" = "中国語（簡体字）";
+"Korean" = "韓国語";
+"Cancel" = "キャンセル";
+"Close" = "閉じる";
+"Save" = "保存";
+"Reset to System" = "システム設定に戻す";

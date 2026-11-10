@@ -1,0 +1,11 @@
+/* 按议题 #18 的约定使用简体中文。 */
+"Language" = "语言";
+"System" = "跟随系统";
+"English" = "英语";
+"Japanese" = "日语";
+"Chinese (Simplified)" = "中文（简体）";
+"Korean" = "韩语";
+"Cancel" = "取消";
+"Close" = "关闭";
+"Save" = "保存";
+"Reset to System" = "恢复为系统设置";

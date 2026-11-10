@@ -1,0 +1,11 @@
+/* #20 owns shared actions and language-choice labels. Named placeholders: {name}. */
+"Language" = "Language";
+"System" = "System";
+"English" = "English";
+"Japanese" = "Japanese";
+"Chinese (Simplified)" = "Chinese (Simplified)";
+"Korean" = "Korean";
+"Cancel" = "Cancel";
+"Close" = "Close";
+"Save" = "Save";
+"Reset to System" = "Reset to System";
