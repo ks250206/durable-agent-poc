@@ -109,7 +109,7 @@ public struct ConversationSidebar: View {
                 ContentUnavailableView(
                     actions.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "No conversations yet" : "No matches",
                     systemImage: "bubble.left",
-                    description: Text(actions.query.isEmpty ? "Your conversations will appear here." : "Try another conversation title.")
+                    description: Text(actions.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Your conversations will appear here." : "Try another conversation title.")
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -149,6 +149,7 @@ public struct ConversationSidebar: View {
         .buttonStyle(.plain)
         .disabled(actions.isBusy)
         .accessibilityLabel(ConversationFilter.title(summary))
+        .accessibilityValue(store.loadedConversations[summary.id]?.activity.isBusy == true ? "Response in progress" : "")
         .accessibilityAddTraits(selected ? .isSelected : [])
         .help(summary.title)
     }

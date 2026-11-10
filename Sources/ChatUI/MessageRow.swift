@@ -37,9 +37,9 @@ enum MessageBlock: Equatable {
             }
             if let character = trimmed.first, character == "`" || character == "~" {
                 let count = trimmed.prefix(while: { $0 == character }).count
-                if count >= 3 {
+                let info = trimmed.dropFirst(count).trimmingCharacters(in: .whitespaces)
+                if count >= 3 && (character != "`" || !info.contains("`")) {
                     flushParagraph()
-                    let info = trimmed.dropFirst(count).trimmingCharacters(in: .whitespaces)
                     fence = (character, count, info.split(whereSeparator: { $0.isWhitespace }).first.map(String.init))
                     continue
                 }
@@ -63,6 +63,12 @@ enum MessageBlock: Equatable {
         flushParagraph()
         if let fence { blocks.append(.code(language: fence.language, text: code.joined(separator: "\n"))) }
         return blocks
+    }
+}
+
+enum MessageLinkPolicy {
+    static func allows(_ url: URL) -> Bool {
+        ["https", "http"].contains(url.scheme?.lowercased() ?? "")
     }
 }
 
@@ -100,6 +106,9 @@ public struct MessageRow: View {
         .padding(16)
         .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
         .background(message.role == .user ? Color.primary.opacity(0.055) : .clear, in: RoundedRectangle(cornerRadius: 16))
+        .environment(\.openURL, OpenURLAction { url in
+            MessageLinkPolicy.allows(url) ? .systemAction : .discarded
+        })
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(roleTitle) message")
         .accessibilityIdentifier("message.\(message.id.rawValue)")
@@ -195,6 +204,9 @@ private struct CopyTextButton: View {
         Button {
             NSPasteboard.general.clearContents()
             copied = NSPasteboard.general.setString(text, forType: .string)
+            NSAccessibility.post(element: NSApplication.shared, notification: .announcementRequested,
+                                 userInfo: [.announcement: copied ? "Copied to clipboard" : "Copy failed",
+                                            .priority: NSAccessibilityPriorityLevel.medium.rawValue])
         } label: { Label(copied ? "Copied" : label, systemImage: copied ? "checkmark" : "doc.on.doc").labelStyle(.iconOnly) }
         .buttonStyle(.borderless).accessibilityLabel(copied ? "Copied to clipboard" : label)
         .help(copied ? "Copied" : label)

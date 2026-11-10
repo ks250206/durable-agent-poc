@@ -72,6 +72,9 @@ import Testing
     #expect(MessageBlock.parse("~~~python\n  print('partial')\n") == [.code(language: "python", text: "  print('partial')\n")])
     #expect(MessageBlock.parse("```\n``` ") == [.code(language: nil, text: "")])
     #expect(MessageBlock.parse("```text\r\n  code\r\n```\r\nDone") == [.code(language: "text", text: "  code\n"), .paragraph("Done")])
+    #expect(MessageBlock.parse("```ls -la``` lists files.\n\nNext paragraph") == [
+        .paragraph("```ls -la``` lists files."), .paragraph("Next paragraph"),
+    ])
     #expect(MessageBlock.parse("").isEmpty)
 }
 
@@ -81,4 +84,11 @@ import Testing
     #expect(ConnectionPresentation(.connected).detail == nil)
     #expect(ConnectionPresentation(.failed("Backend unavailable")).detail == "Backend unavailable")
     #expect(ConnectionPresentation(.disconnected).title == "Disconnected")
+}
+
+@Test func messageLinksOnlyOpenWebSchemes() {
+    #expect(MessageLinkPolicy.allows(URL(string: "https://example.com")!))
+    #expect(MessageLinkPolicy.allows(URL(string: "http://example.com")!))
+    #expect(!MessageLinkPolicy.allows(URL(string: "file:///tmp/private.txt")!))
+    #expect(!MessageLinkPolicy.allows(URL(string: "custom-app://perform-action")!))
 }

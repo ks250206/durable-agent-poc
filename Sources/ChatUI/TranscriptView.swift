@@ -135,7 +135,11 @@ private struct TranscriptContent: View {
                         proxy.scrollTo(Anchor.bottom, anchor: .bottom)
                     }
                 }
-                .onChange(of: viewport.size.height) { _, height in report(measurements, height: height) }
+                .onChange(of: viewport.size.height) { _, height in
+                    let wasFollowing = scrollState.followsLatest
+                    report(measurements, height: height)
+                    if wasFollowing { proxy.scrollTo(Anchor.bottom, anchor: .bottom) }
+                }
                 .onChange(of: navigation.scrollRequest?.id) { _, _ in
                     guard let request = navigation.scrollRequest, messages.contains(where: { $0.id == request.messageID }) else { return }
                     scrollState.jump()
