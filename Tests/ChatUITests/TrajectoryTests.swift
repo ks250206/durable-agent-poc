@@ -299,7 +299,10 @@ extension NativeUITests {
         let view = try #require(trajectoryFind(host, TrajectoryView.self).first)
         view.numberField.stringValue = "10000"
         view.controlTextDidChange(Notification(name: NSControl.textDidChangeNotification, object: view.numberField))
-        view.goButton.performClick(nil)
+        // This is state setup for streaming/identity coverage. Dispatch the real action
+        // without NSButton's blocking press animation in the async-main test host.
+        // The separate native pointer/key test still exercises the interactive Go control.
+        #expect(view.goButton.sendAction(view.goButton.action, to: view.goButton.target))
         view.search.stringValue = "Message"
         view.controlTextDidChange(Notification(name: NSControl.textDidChangeNotification, object: view.search))
         view.table.scrollRowToVisible(7000)
