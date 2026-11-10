@@ -21,6 +21,16 @@ enum ConversationFilter {
     }
 }
 
+/// Provider-owned runtime names are provenance data, not translation keys.
+enum ConversationRuntimeCaption {
+    static func name(for id: ConversationID) -> String? {
+        if id.rawValue.hasPrefix("pi:conversation:") { return "Pi" }
+        if id.rawValue.hasPrefix("cursor:conversation:") { return "Cursor" }
+        if id.rawValue.hasPrefix("codex:conversation:") { return "Codex CLI" }
+        return nil
+    }
+}
+
 /// Serializes sidebar commands without optimistically changing backend-owned selection.
 @MainActor @Observable
 final class ConversationSidebarActions {
@@ -183,7 +193,6 @@ public struct ConversationSidebar: View {
                 .textFieldStyle(.plain).focused($searchFocused)
                 .accessibilityLabel(localization.chat("Search conversations"))
                 .accessibilityIdentifier("chat.sidebar.search")
-                .onExitCommand { actions.query = "" }
             if !actions.query.isEmpty {
                 Button { actions.query = "" } label: { Image(systemName: "xmark.circle.fill").padding(3) }
                     .buttonStyle(WorkspaceButtonStyle())
@@ -209,10 +218,15 @@ public struct ConversationSidebar: View {
             HStack(alignment: .top, spacing: 10) {
                 RoundedRectangle(cornerRadius: 2).fill(selected ? appearance.palette.accent.color : .clear)
                     .frame(width: 3, height: 16).padding(.top, 1).accessibilityHidden(true)
-                Text(ConversationFilter.title(summary, localizer: localization))
-                    .font(ChatTheme.Typography.secondary.weight(selected ? .medium : .regular))
-                    .lineLimit(2).multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(ConversationFilter.title(summary, localizer: localization))
+                        .font(ChatTheme.Typography.secondary.weight(selected ? .medium : .regular))
+                        .lineLimit(2).multilineTextAlignment(.leading)
+                    if let runtime = ConversationRuntimeCaption.name(for: summary.id) {
+                        Text(verbatim: runtime).font(ChatTheme.Typography.caption)
+                            .foregroundStyle(appearance.palette.secondaryText.color)
+                    }
+                }.frame(maxWidth: .infinity, alignment: .leading)
                 if store.loadedConversations[summary.id]?.activity.isBusy == true {
                     Image(systemName: "ellipsis").foregroundStyle(appearance.palette.accent.color)
                         .accessibilityLabel(localization.chat("Response in progress"))
@@ -226,8 +240,10 @@ public struct ConversationSidebar: View {
         .disabled(actions.isBusy)
         .accessibilityIdentifier("chat.sidebar.row.\(summary.id.rawValue)")
         .accessibilityLabel(ConversationFilter.title(summary, localizer: localization))
-        .accessibilityValue(store.loadedConversations[summary.id]?.activity.isBusy == true ? localization.chat("Response in progress") : "")
+        .accessibilityValue([ConversationRuntimeCaption.name(for: summary.id),
+            store.loadedConversations[summary.id]?.activity.isBusy == true ? localization.chat("Response in progress") : nil]
+            .compactMap { $0 }.joined(separator: " · "))
         .accessibilityAddTraits(selected ? .isSelected : [])
-        .help(summary.title)
+        .help(ConversationFilter.title(summary, localizer: localization))
     }
 }

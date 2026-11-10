@@ -88,6 +88,11 @@ public struct ChatWorkspaceView<Composer: View, Minimap: View>: View {
             .frame(height: appearance.strokeWidth).accessibilityHidden(true)
     }
 
+    private var conversationTitle: String {
+        store.conversations.first(where: { $0.id == store.selectedConversationID })
+            .map { ConversationFilter.title($0, localizer: localization) } ?? localization.chat("New conversation")
+    }
+
     private func header(_ layout: WorkspaceLayout) -> some View {
         HStack(alignment: .center, spacing: ChatTheme.Spacing.medium) {
             Button {
@@ -102,9 +107,9 @@ public struct ChatWorkspaceView<Composer: View, Minimap: View>: View {
             .help(localization.chat("Show or hide conversations"))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(store.conversations.first(where: { $0.id == store.selectedConversationID }).map { ConversationFilter.title($0, localizer: localization) } ?? localization.chat("New conversation"))
+                Text(conversationTitle)
                     .font(ChatTheme.Typography.heading).lineLimit(1).truncationMode(.tail)
-                    .help(store.conversations.first(where: { $0.id == store.selectedConversationID })?.title ?? localization.chat("New conversation"))
+                    .help(conversationTitle)
                 Text(store.modelSelection.map { "\($0.modelID) · \($0.account.providerID)" } ?? localization.chat("No model selected"))
                     .font(ChatTheme.Typography.caption).foregroundStyle(appearance.palette.secondaryText.color).lineLimit(1)
                     .accessibilityLabel(localization.chat("Selected model"))

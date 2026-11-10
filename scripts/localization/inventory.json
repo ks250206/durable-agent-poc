@@ -4685,18 +4685,6 @@
         }
       },
       {
-        "prefix": ".help(store.conversations.first(where: { $0.id == store.selectedConversationID })?.title ?? localization.chat(",
-        "literal": "\"New conversation\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "New conversation"
-          ]
-        }
-      },
-      {
         "prefix": ".help(store.modelSelection.map {",
         "literal": "\"\\($0.modelID) · \\($0.account.providerID)\"",
         "count": 1,
@@ -4716,23 +4704,23 @@
         }
       },
       {
-        "prefix": "Button { store.clearFailure() } label: { Image(systemName:",
-        "literal": "\"xmark\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "Text(localization.chat(",
-        "literal": "\"Done\"",
+        "prefix": ".map { ConversationFilter.title($0, localizer: localization) } ?? localization.chat(",
+        "literal": "\"New conversation\"",
         "count": 1,
         "kind": "localized",
         "reason": "R4",
         "keys": {
           "ChatUI": [
-            "Done"
+            "New conversation"
           ]
         }
+      },
+      {
+        "prefix": "Button { store.clearFailure() } label: { Image(systemName:",
+        "literal": "\"xmark\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
       },
       {
         "prefix": "Image(systemName:",
@@ -4782,14 +4770,14 @@
         "reason": "R7"
       },
       {
-        "prefix": "Text(store.conversations.first(where: { $0.id == store.selectedConversationID }).map { ConversationFilter.title($0, localizer: localization) } ?? localization.chat(",
-        "literal": "\"New conversation\"",
+        "prefix": "Text(localization.chat(",
+        "literal": "\"Done\"",
         "count": 1,
         "kind": "localized",
         "reason": "R4",
         "keys": {
           "ChatUI": [
-            "New conversation"
+            "Done"
           ]
         }
       },
@@ -5526,23 +5514,11 @@
         }
       },
       {
-        "prefix": ".accessibilityValue(store.loadedConversations[summary.id]?.activity.isBusy == true ? localization.chat(",
-        "literal": "\"Response in progress\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Response in progress"
-          ]
-        }
-      },
-      {
-        "prefix": ".accessibilityValue(store.loadedConversations[summary.id]?.activity.isBusy == true ? localization.chat(\"Response in progress\") :",
-        "literal": "\"\"",
-        "count": 1,
         "kind": "allowlisted",
-        "reason": "R7"
+        "reason": "R7",
+        "prefix": ".compactMap { $0 }.joined(separator:",
+        "literal": "\" · \"",
+        "count": 1
       },
       {
         "prefix": ".help(localization.chat(",
@@ -5559,13 +5535,6 @@
       {
         "prefix": ".keyboardShortcut(",
         "literal": "\"n\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": ".onExitCommand { actions.query =",
-        "literal": "\"\"",
         "count": 1,
         "kind": "allowlisted",
         "reason": "R7"
@@ -5737,6 +5706,48 @@
         "reason": "R7"
       },
       {
+        "kind": "allowlisted",
+        "reason": "R7",
+        "prefix": "if id.rawValue.hasPrefix(",
+        "literal": "\"codex:conversation:\"",
+        "count": 1
+      },
+      {
+        "kind": "allowlisted",
+        "reason": "R7",
+        "prefix": "if id.rawValue.hasPrefix(",
+        "literal": "\"cursor:conversation:\"",
+        "count": 1
+      },
+      {
+        "kind": "allowlisted",
+        "reason": "R7",
+        "prefix": "if id.rawValue.hasPrefix(",
+        "literal": "\"pi:conversation:\"",
+        "count": 1
+      },
+      {
+        "kind": "allowlisted",
+        "reason": "R7",
+        "prefix": "if id.rawValue.hasPrefix(\"codex:conversation:\") { return",
+        "literal": "\"Codex CLI\"",
+        "count": 1
+      },
+      {
+        "kind": "allowlisted",
+        "reason": "R7",
+        "prefix": "if id.rawValue.hasPrefix(\"cursor:conversation:\") { return",
+        "literal": "\"Cursor\"",
+        "count": 1
+      },
+      {
+        "kind": "allowlisted",
+        "reason": "R7",
+        "prefix": "if id.rawValue.hasPrefix(\"pi:conversation:\") { return",
+        "literal": "\"Pi\"",
+        "count": 1
+      },
+      {
         "prefix": "if let failure = store.lastFailure, failure.operation ==",
         "literal": "\"select\"",
         "count": 1,
@@ -5749,6 +5760,18 @@
         "count": 1,
         "kind": "allowlisted",
         "reason": "R7"
+      },
+      {
+        "prefix": "store.loadedConversations[summary.id]?.activity.isBusy == true ? localization.chat(",
+        "literal": "\"Response in progress\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "Response in progress"
+          ]
+        }
       },
       {
         "prefix": "summary.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? localizer.chat(",

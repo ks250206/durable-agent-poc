@@ -16,7 +16,8 @@ private actor ChromeBackend: ChatBackend {
     private(set) var creates = 0
     private var rejectSelection = false
 
-    init(connection: ConnectionState = .connected, activity: ConversationActivity = .idle, empty: Bool = false, unloaded: Bool = false) {
+    init(connection: ConnectionState = .connected, activity: ConversationActivity = .idle, empty: Bool = false, unloaded: Bool = false,
+         runtimeIDs: [ConversationID]? = nil) {
         let first = ConversationSnapshot(summary: ConversationSummary(id: chromeFirst, title: chromeTitle), messages: [
             ChatMessage(id: MessageID("chrome:question"), conversationID: chromeFirst, role: .user,
                         content: "How should a readable conversation workspace behave?"),
@@ -28,6 +29,11 @@ private actor ChromeBackend: ChatBackend {
         state = ChatSnapshot(connection: connection, conversations: empty ? [] : [first.summary, second.summary],
                              selectedConversationID: empty ? nil : chromeFirst,
                              loadedConversations: empty || unloaded ? [] : [first, second])
+        if let runtimeIDs {
+            let summaries = runtimeIDs.map { ConversationSummary(id: $0, title: "Same conversation title") }
+            state = ChatSnapshot(connection: .connected, conversations: summaries, selectedConversationID: runtimeIDs.first,
+                                 loadedConversations: summaries.map { ConversationSnapshot(summary: $0) })
+        }
     }
     func snapshot() async throws -> ChatSnapshot { state }
     func events() async -> AsyncThrowingStream<ChatEvent, any Error> {
@@ -208,6 +214,49 @@ extension NativeUITests {
         try await chromeSettle { store.lastFailure?.operation == "select" }
         try await chromeSettle { chromeLabels(hosted.view).contains("Selection fixture failed") }
         #expect(store.selectedConversationID == ConversationID("chrome:created:2"))
+    }
+
+    @Test func runtimeCaptionsDistinguishOtherwiseIdenticalConversationRows() async throws {
+        let ids = ["pi:conversation:one", "cursor:conversation:two", "codex:conversation:three"].map { ConversationID($0) }
+        let store = ChatStore(backend: ChromeBackend(runtimeIDs: ids))
+        let observation = Task { await store.start() }
+        defer { observation.cancel() }
+        try await chromeSettle { store.conversations.count == 3 }
+        let hosted = ChromeHost(ConversationSidebar(store: store), width: 248)
+        defer { hosted.window.close() }
+        for (id, runtime) in zip(ids, ["Pi", "Cursor", "Codex CLI"]) {
+            try await chromeSettle {
+                chromeNodes(hosted.view).contains {
+                    chromeAttribute($0, "accessibilityIdentifier") == "chat.sidebar.row.\(id.rawValue)" &&
+                    chromeAttribute($0, "accessibilityValue") == runtime
+                }
+            }
+        }
+    }
+
+    @Test func escapeClosesNarrowDrawerWithFocusedNonemptyAndEmptySearch() async throws {
+        let store = ChatStore(backend: ChromeBackend())
+        let observation = Task { await store.start() }
+        defer { observation.cancel() }
+        try await chromeSettle { store.selectedConversationID == chromeFirst }
+        let hosted = ChromeHost(ChatWorkspaceView(store: store, navigation: TranscriptNavigation()), width: 400)
+        defer { hosted.window.close() }
+        for query in ["cafe", ""] {
+            try hosted.click("chat.workspace.sidebar")
+            try await chromeSettle { !hosted.window.sheets.isEmpty }
+            let sheet = try #require(hosted.window.sheets.first)
+            try hosted.click("chat.sidebar.search", in: sheet)
+            let content = try #require(sheet.contentView)
+            let field = try #require(chromeDescendants(content, NSTextField.self).first { $0.isEditable })
+            let editor = try #require(field.currentEditor() as? NSTextView)
+            editor.insertText(query, replacementRange: editor.selectedRange())
+            let escape = try #require(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [],
+                timestamp: 0, windowNumber: sheet.windowNumber, context: nil, characters: "\u{1b}",
+                charactersIgnoringModifiers: "\u{1b}", isARepeat: false, keyCode: 53))
+            #expect(sheet.performKeyEquivalent(with: escape))
+            try await chromeSettle { hosted.window.sheets.isEmpty }
+            #expect(store.selectedConversationID == chromeFirst)
+        }
     }
 
     @Test func narrowSheetSelectsAndClosesThenStopTargetsTheActualBusyConversation() async throws {
