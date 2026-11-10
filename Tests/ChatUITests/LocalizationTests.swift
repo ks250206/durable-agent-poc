@@ -8,6 +8,12 @@ import Testing
 // message roles/status/Markdown/copy, and every minimap/help/AX/count branch.
 // Product/provider names, saved titles, IDs, paths and transcript content stay verbatim.
 private let chatUIKeys: Set<String> = [
+    "User input navigation",
+    "User input {current} of {total}",
+    "Each bar is a user input. The bright bar follows the transcript center. Hover previews the original input. Click, Up/Down, Home/End or Return jumps to an input. Tab leaves navigation.",
+    "Showing inputs {first}–{last} of {total}. Scroll here or use Page Up/Down to browse every input.",
+    "{count} user inputs. Transcript center unavailable.",
+
     "All messages…",
     "{count} message in total",
     "All {count} messages",

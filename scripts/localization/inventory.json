@@ -45,6 +45,7 @@
       "Dismiss selection error",
       "Done",
       "DurableChat application shell",
+      "Each bar is a user input. The bright bar follows the transcript center. Hover previews the original input. Click, Up/Down, Home/End or Return jumps to an input. Tab leaves navigation.",
       "Empty message",
       "Enter / ⌘Enter to send · Shift+Enter for a new line\nConfirm IME composition before sending.",
       "Enter or Command+Enter sends committed text. Shift+Enter inserts a new line. Confirm IME composition before sending.",
@@ -81,6 +82,7 @@
       "Sending…",
       "Show or hide conversations",
       "Show transcript overview",
+      "Showing inputs {first}–{last} of {total}. Scroll here or use Page Up/Down to browse every input.",
       "Start a conversation",
       "Stop",
       "Stop response",
@@ -95,6 +97,8 @@
       "Untitled conversation",
       "Up and Down navigate every message. Home and End jump to the ends. Return repeats a jump. Use All messages for individual messages and exact message numbers.",
       "User",
+      "User input navigation",
+      "User input {current} of {total}",
       "Viewing {first}–{last} of {total}",
       "Visible range unavailable",
       "Waiting for response…",
@@ -113,6 +117,7 @@
       "{count} sample conversations",
       "{count} sample message",
       "{count} sample messages",
+      "{count} user inputs. Transcript center unavailable.",
       "{language} code block, horizontally scrollable",
       "{number} · {role} · {bytes} bytes · {status}",
       "{number} · {role} · {status}",
@@ -6315,6 +6320,153 @@
         "reason": "R7"
       }
     ],
+    "Sources/ChatUI/PromptRail.swift": [
+      {
+        "prefix": "setAccessibilityIdentifier(",
+        "literal": "\"promptRail.navigation\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "earlierLayer.string =",
+        "literal": "\"⌃\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "laterLayer.string =",
+        "literal": "\"⌄\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "required init?(coder: NSCoder) { fatalError(",
+        "literal": "\"init(coder:) has not been implemented\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "localizer.chat(",
+        "literal": "\"User input {current} of {total}\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "User input {current} of {total}"
+          ]
+        }
+      },
+      {
+        "prefix": "localizer.chat(\"User input {current} of {total}\", [",
+        "literal": "\"current\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "localizer.chat(\"User input {current} of {total}\", [\"current\": .integer(index + 1),",
+        "literal": "\"total\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "setAccessibilityLabel(localizer.chat(",
+        "literal": "\"User input navigation\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "User input navigation"
+          ]
+        }
+      },
+      {
+        "prefix": "var help = localizer.chat(",
+        "literal": "\"Each bar is a user input. The bright bar follows the transcript center. Hover previews the original input. Click, Up/Down, Home/End or Return jumps to an input. Tab leaves navigation.\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "Each bar is a user input. The bright bar follows the transcript center. Hover previews the original input. Click, Up/Down, Home/End or Return jumps to an input. Tab leaves navigation."
+          ]
+        }
+      },
+      {
+        "prefix": "help +=",
+        "literal": "\" \"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "help += \" \" + localizer.chat(",
+        "literal": "\"Showing inputs {first}–{last} of {total}. Scroll here or use Page Up/Down to browse every input.\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "Showing inputs {first}–{last} of {total}. Scroll here or use Page Up/Down to browse every input."
+          ]
+        }
+      },
+      {
+        "prefix": "",
+        "literal": "\"first\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "",
+        "literal": "\"last\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "\"last\": .integer(geometry.visible.upperBound),",
+        "literal": "\"total\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "setAccessibilityValue(inputDescription(index) +",
+        "literal": "\"\\n\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "} else { setAccessibilityValue(localizer.chat(",
+        "literal": "\"{count} user inputs. Transcript center unavailable.\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "{count} user inputs. Transcript center unavailable."
+          ]
+        }
+      },
+      {
+        "prefix": "} else { setAccessibilityValue(localizer.chat(\"{count} user inputs. Transcript center unavailable.\", [",
+        "literal": "\"count\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      }
+    ],
+    "Sources/ChatUI/PromptRailGeometry.swift": [],
     "Sources/ChatUI/Theme.swift": [
       {
         "prefix": "(title, symbol, detail) = (localizer.chat(",
