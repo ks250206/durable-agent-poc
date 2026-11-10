@@ -12,11 +12,12 @@ public struct ProviderSettingsView: View {
     private let onSelection: @MainActor (ModelSelection?) -> Void
     @PiStoredState<[ProviderStatus]> private var statuses: [ProviderStatus] = []
     @PiStoredState<ProviderAccount?> private var account: ProviderAccount?
-    @PiStoredState<ProviderAccount?> private var activeAccount: ProviderAccount?
     @PiStoredState<String> private var apiKey = ""
+    @PiStoredState<String> private var executablePath = ""
     @PiStoredState<String?> private var failure: String?
     @PiStoredState<Bool> private var working = false
     @PiStoredState<ProviderAccount?> private var signingIn: ProviderAccount?
+    @PiStoredState<Task<Void, Never>?> private var operationTask: Task<Void, Never>?
     @PiStoredState<Task<Void, Never>?> private var loginTask: Task<Void, Never>?
 
     public init(service: any ProviderSettingsService, initialAccount: ProviderAccount? = nil,
@@ -24,7 +25,6 @@ public struct ProviderSettingsView: View {
         self.service = service
         self.onSelection = onSelection
         _account = PiStoredState(initialValue: initialAccount)
-        _activeAccount = PiStoredState(initialValue: initialAccount)
     }
 
     public var body: some View {
@@ -53,20 +53,25 @@ public struct ProviderSettingsView: View {
                         }
                         Text("The key is stored in Keychain. Its value is never loaded into this field.")
                             .font(.caption).foregroundStyle(.secondary)
+                    } else if status.configuration.account.option == .cursor {
+                        TextField("Cursor CLI absolute path (blank: discover)", text: $executablePath)
+                            .disabled(working || signingIn != nil)
+                        Button("Save CLI path") {
+                            var configuration = status.configuration
+                            let path = executablePath.trimmingCharacters(in: .whitespacesAndNewlines)
+                            configuration.executablePath = path.isEmpty ? nil : path
+                            let saved = configuration
+                            operate { try await service.update(saved) }
+                        }.disabled(working || signingIn != nil)
+                        Text(CursorProviderSettingsService.loginInstructions)
+                            .font(.caption).foregroundStyle(.secondary)
+                        Text("Credentials remain in Cursor's official CLI store. Only use a trusted executable.")
+                            .font(.caption).foregroundStyle(.secondary)
+                        authenticationControls(status.configuration.account, title: "Sign in with Cursor")
                     } else if status.configuration.account.option == .chatGPT {
                         Text("ChatGPT subscription sign-in requires your interaction in the secure authentication session. It is separate from an OpenAI API key.")
                             .font(.caption).foregroundStyle(.secondary)
-                        HStack {
-                            if signingIn != nil {
-                                ProgressView().controlSize(.small)
-                                Button("Cancel sign-in") { cancelSignIn() }
-                            } else {
-                                Button("Sign in with ChatGPT") { signIn(status.configuration.account) }
-                                Button("Sign out") {
-                                    operate { try await service.logout(from: status.configuration.account) }
-                                }
-                            }
-                        }.disabled(working)
+                        authenticationControls(status.configuration.account, title: "Sign in with ChatGPT")
                     }
                     Picker("Model", selection: Binding(
                         get: { current?.configuration.selectedModelID },
@@ -82,10 +87,9 @@ public struct ProviderSettingsView: View {
                         }
                     }.disabled(working || signingIn != nil)
                     Button("Use selected model") {
-                        activeAccount = account
                         publishSelection()
                     }.disabled(working || signingIn != nil || status.authentication != .configured
-                               || status.configuration.selectedModelID == nil)
+                               || !status.models.contains(where: { $0.id.modelID == status.configuration.selectedModelID }))
                     if status.models.isEmpty {
                         Text("This provider has no available models.").foregroundStyle(.secondary)
                     }
@@ -94,6 +98,8 @@ public struct ProviderSettingsView: View {
             if let failure {
                 Section { Text(failure).foregroundStyle(.red).accessibilityLabel("Settings error: \(failure)") }
             }
+            Button("Disable sending (clear active model)") { onSelection(nil) }
+                .disabled(working || signingIn != nil)
             Button("Refresh provider state") { operate {} }.disabled(working || signingIn != nil)
         }
         .formStyle(.grouped)
@@ -102,11 +108,25 @@ public struct ProviderSettingsView: View {
         .onChange(of: account) { _, _ in
             apiKey = ""
             failure = nil
+            executablePath = current?.configuration.executablePath ?? ""
         }
         .onDisappear {
             apiKey = ""
+            operationTask?.cancel()
             cancelSignIn()
         }
+    }
+
+    @ViewBuilder private func authenticationControls(_ account: ProviderAccount, title: String) -> some View {
+        HStack {
+            if signingIn != nil {
+                ProgressView().controlSize(.small)
+                Button("Cancel sign-in") { cancelSignIn() }
+            } else {
+                Button(title) { signIn(account) }
+                Button("Sign out") { operate { try await service.logout(from: account) } }
+            }
+        }.disabled(working)
     }
 
     private var current: ProviderStatus? { statuses.first { $0.configuration.account == account } }
@@ -121,12 +141,11 @@ public struct ProviderSettingsView: View {
         }
     }
     private func publishSelection() {
-        guard let activeAccount else { return }
-        let active = statuses.first { $0.configuration.account == activeAccount }
+        guard let account else { return }
+        let active = statuses.first { $0.configuration.account == account }
         guard let current = active, current.authentication == .configured,
               let modelID = current.configuration.selectedModelID,
               current.models.contains(where: { $0.id.modelID == modelID }) else {
-            onSelection(nil)
             return
         }
         onSelection(ModelSelection(account: current.configuration.account, modelID: modelID))
@@ -135,16 +154,17 @@ public struct ProviderSettingsView: View {
         do {
             statuses = try await service.snapshot()
             if let account, !statuses.contains(where: { $0.configuration.account == account }) { self.account = nil }
-            publishSelection()
+            executablePath = current?.configuration.executablePath ?? ""
         } catch { failure = "Provider settings could not be loaded." }
     }
     private func operate(_ operation: @escaping @MainActor () async throws -> Void) {
         guard !working else { return }
         working = true
         failure = nil
-        Task { @MainActor in
-            defer { working = false }
+        operationTask = Task { @MainActor in
+            defer { working = false; operationTask = nil }
             do { try await operation() }
+            catch is CancellationError { return }
             catch { failure = "The settings operation failed. Check the provider and try again." }
             await refresh()
         }

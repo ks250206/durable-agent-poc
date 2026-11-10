@@ -22,7 +22,10 @@ let package = Package(
         .target(name: "AgentRuntime", dependencies: [
             "ChatCore", .product(name: "PiDurableKit", package: "PiDurableKit"),
         ]),
-        .executableTarget(name: "DurableChatApp", dependencies: ["ChatCore", "ChatUI", "AgentRuntime"]),
+        .executableTarget(name: "DurableChatApp", dependencies: [
+            "ChatCore", "ChatUI", "AgentRuntime", .product(name: "PiDurableKit", package: "PiDurableKit"),
+        ]),
+        .testTarget(name: "AppIntegrationTests", dependencies: ["DurableChatApp", "ChatCore", "ChatUI", "AgentRuntime"]),
         .testTarget(name: "ChatCoreTests", dependencies: ["ChatCore"]),
         .testTarget(name: "ChatUITests", dependencies: ["ChatUI", "ChatCore"]),
         .testTarget(name: "AgentRuntimeTests", dependencies: ["AgentRuntime", "ChatCore"]),

@@ -196,3 +196,12 @@ App owns store/navigation in a single main Window. The Settings scene is a place
 ProviderSettingsView; #9 injects the runtime/service and connects the real workspace/composer/minimap.
 Package target dependencies are already wired: ChatUI -> ChatCore; AgentRuntime -> ChatCore + pinned
 PiDurableKit; DurableChatApp -> all three. All three libraries have test targets.
+
+## Issue 9 application routing extension
+
+`ChatSnapshot.modelContext: ChatModelContext?` defaults to nil so standalone backends and existing clients
+retain their behavior. The composite router supplies `ChatModelContext(selection: ModelSelection?, notice: String?)`;
+ChatStore applies the choice/notice atomically with selection and transcript, exposing `routingNotice` for app UX.
+The model remains UI-writable for standalone clients; integrated app settings use `ChatBackendRouter.useModel`.
+`ChatStore.stop(conversationID: ConversationID?)` additionally permits pre-Task origin capture; `stop()` remains.
+See [Integration.md](Integration.md) for composite subscription, persisted account bindings and shutdown ownership.

@@ -89,10 +89,11 @@ final class ComposerInput {
 
     func stop(store: ChatStore) {
         guard store.isSending, !isStopping else { return }
+        let origin = store.selectedConversationID
         isStopping = true
         Task { @MainActor in
             defer { isStopping = false }
-            await store.stop()
+            await store.stop(conversationID: origin)
         }
     }
 }

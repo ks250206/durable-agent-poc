@@ -31,7 +31,7 @@ which imports SwiftUI; ChatUI does not depend on AgentRuntime.
 No provider or model is chosen implicitly. The settings view starts with the supplied
 account (or an explicit “Choose a provider” item), persists each provider's selected
 model with `update`, and calls `onSelection` with a configured, catalog-valid selection,
-or nil. The caller owns the active account across settings-window lifetimes. Browsing another account does not change it; the explicit Use selected model button applies the choice.
+or nil only via the explicit Disable sending action. Status refresh does not invoke the selection callback. The caller owns the active account across settings-window lifetimes. Browsing another account does not change it; the explicit Use selected model button applies the choice.
 For a headless integration, read `snapshot()`, choose a `ProviderStatus`, persist
 `ProviderConfiguration(account:selectedModelID:)`, and copy its explicit `ModelSelection`
 into `ChatStore.modelSelection`. Setting a model does not authenticate or send anything.
@@ -95,8 +95,7 @@ injected interaction factory. Subscription authentication requires real user int
 in the secure browser session. The view owns the login Task; dismissal, task cancellation,
 and `cancelLogin` cancel Pi's operation and dismiss authentication. Logout waits for login
 cancellation before removing that route's credential, without holding the settings operation lock. New sign-ins remain blocked until logout finishes. API-key and subscription slots
-remain separate. Nonsecret selected models persist after logout, but the callback returns
-nil until configured again. Raw keys/tokens, OAuth URLs/codes, and upstream error detail
+remain separate. Nonsecret selected models persist after logout. The composite router disables sending from provider status while retaining the explicit active preference; browsing or refreshing settings does not invoke the selection callback. Raw keys/tokens, OAuth URLs/codes, and upstream error detail
 never enter settings/chat snapshots, app preferences, or app logging callbacks. UI errors
 are fixed sanitized messages; the provider's actual errorMessage is not rendered.
 

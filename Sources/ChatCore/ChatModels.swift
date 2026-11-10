@@ -76,18 +76,28 @@ public enum ConnectionState: Equatable, Codable, Sendable {
     public var canSend: Bool { self == .connected }
 }
 
-/// A complete replacement of the list, selection, connection, and loaded transcript cache.
-/// Include the selected transcript in loadedConversations. Unloaded conversations still appear in the list.
+/// Optional atomic app routing metadata. Standalone backends leave it nil.
+public struct ChatModelContext: Equatable, Codable, Sendable {
+    public var selection: ModelSelection?
+    public var notice: String?
+    public init(selection: ModelSelection?, notice: String? = nil) { self.selection = selection; self.notice = notice }
+}
+
+/// A complete replacement of list, selection, connection and loaded transcript cache.
+/// Include the selected transcript. Unloaded conversations still appear in the list.
 public struct ChatSnapshot: Equatable, Codable, Sendable {
     public var connection: ConnectionState
+    public var modelContext: ChatModelContext?
     public var conversations: [ConversationSummary]
     public var selectedConversationID: ConversationID?
     public var loadedConversations: [ConversationSnapshot]
 
     public init(
         connection: ConnectionState = .disconnected, conversations: [ConversationSummary] = [],
-        selectedConversationID: ConversationID? = nil, loadedConversations: [ConversationSnapshot] = []
+        selectedConversationID: ConversationID? = nil, loadedConversations: [ConversationSnapshot] = [],
+        modelContext: ChatModelContext? = nil
     ) {
+        self.modelContext = modelContext
         self.connection = connection
         self.conversations = conversations
         self.selectedConversationID = selectedConversationID

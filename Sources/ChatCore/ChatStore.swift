@@ -11,6 +11,7 @@ public final class ChatStore {
     public private(set) var loadedConversations: [ConversationID: ConversationSnapshot] = [:]
     public private(set) var lastFailure: ChatFailure?
     public private(set) var isObserving = false
+    public private(set) var routingNotice: String?
     public var draft = ""
     public var modelSelection: ModelSelection?
 
@@ -120,8 +121,10 @@ public final class ChatStore {
         if await send(submitted), draft == submitted { draft = "" }
     }
 
-    public func stop() async {
-        guard let id = selectedConversationID else { return }
+    public func stop() async { await stop(conversationID: selectedConversationID) }
+
+    public func stop(conversationID: ConversationID?) async {
+        guard let id = conversationID else { return }
         do {
             try await backend.stop(conversationID: id)
         } catch {
@@ -132,6 +135,10 @@ public final class ChatStore {
     private func apply(_ event: ChatEvent) {
         switch event {
         case .snapshot(let snapshot):
+            if let context = snapshot.modelContext {
+                modelSelection = context.selection
+                routingNotice = context.notice
+            }
             connection = snapshot.connection
             conversations = snapshot.conversations
             selectedConversationID = snapshot.selectedConversationID
