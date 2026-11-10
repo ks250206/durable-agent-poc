@@ -78,6 +78,7 @@ final class PromptRailInputView: NSView {
     private var bars: [MessageID: CALayer] = [:]
     private let earlierLayer = CATextLayer()
     private let laterLayer = CATextLayer()
+    private let focusRing = CAShapeLayer()
     private var popover: NSPopover?
     private(set) var previewText: String?
     private var previewID: MessageID?
@@ -106,6 +107,8 @@ final class PromptRailInputView: NSView {
         }
         earlierLayer.string = "⌃"
         laterLayer.string = "⌄"
+        focusRing.fillColor = nil
+        layer?.addSublayer(focusRing)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
@@ -129,10 +132,10 @@ final class PromptRailInputView: NSView {
         let measuredCurrent = model.currentInput(in: viewport)
         if currentID != measuredCurrent || changedConversation {
             currentID = measuredCurrent
-            cursorID = nil // manual scroll returns keyboard navigation to the measured turn
-            setHover(nil)
-            closePreview()
-            if let index = model.index(for: currentID) { reveal(index) }
+            // Measurement owns only the current marker. Jumps may put a different turn
+            // at the viewport center, and streaming must not dismiss an active preview.
+            if cursorID == nil, hoveredID == nil, previewID == nil,
+               let index = model.index(for: currentID) { reveal(index) }
         }
         if model.index(for: cursorID) == nil { cursorID = nil }
         if model.index(for: hoveredID) == nil { setHover(nil) }
@@ -215,10 +218,17 @@ final class PromptRailInputView: NSView {
                 let alpha: CGFloat = current ? 0.95 : (hovered ? 0.75 : (increasedContrast ? 0.7 : 0.46))
                 bar.backgroundColor = NSColor.labelColor.withAlphaComponent(alpha).cgColor
                 if reduceMotion { bar.removeAllAnimations() }
-                let focused = keyboardFocused && id == (cursorID ?? currentID)
-                bar.borderWidth = focused ? 1 : 0
-                bar.borderColor = NSColor.controlAccentColor.cgColor
+                bar.borderWidth = 0
             }
+            let focusIndex = model.index(for: cursorID ?? currentID)
+            focusRing.isHidden = !keyboardFocused || focusIndex.map { !geometry.visible.contains($0) } != false
+            focusRing.path = focusIndex.flatMap { index in
+                geometry.visible.contains(index)
+                    ? CGPath(roundedRect: geometry.cell(for: index).insetBy(dx: 2, dy: 1), cornerWidth: 3, cornerHeight: 3, transform: nil)
+                    : nil
+            }
+            focusRing.strokeColor = NSColor.labelColor.cgColor
+            focusRing.lineWidth = increasedContrast ? 2 : 1.5
             earlierLayer.frame = CGRect(x: 0, y: 0, width: bounds.width, height: PromptRailGeometry.controlHeight)
             laterLayer.frame = CGRect(x: 0, y: max(0, bounds.height - PromptRailGeometry.controlHeight),
                                       width: bounds.width, height: PromptRailGeometry.controlHeight)
@@ -324,7 +334,7 @@ final class PromptRailInputView: NSView {
     private func updateAccessibility() {
         setAccessibilityLabel(localizer.chat("User input navigation"))
         var help = localizer.chat("Each bar is a user input. The bright bar follows the transcript center. Hover previews the original input. Click, Up/Down, Home/End or Return jumps to an input. Tab leaves navigation.")
-        if geometry.isWindowed {
+        if geometry.isWindowed && !geometry.visible.isEmpty {
             help += " " + localizer.chat("Showing inputs {first}–{last} of {total}. Scroll here or use Page Up/Down to browse every input.", [
                 "first": .integer(geometry.visible.isEmpty ? 0 : geometry.visible.lowerBound + 1),
                 "last": .integer(geometry.visible.upperBound), "total": .integer(model.inputs.count),

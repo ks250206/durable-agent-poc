@@ -190,6 +190,15 @@ extension NativeUITests {
         #expect(input.hoveredID == messages[0].id)
         #expect(input.currentID == messages[0].id)
         #expect(input.previewText == messages[0].content)
+        // Streaming/manual measurement can move the center without touching a hovered input.
+        input.configure(model: model, conversationID: railConversation, navigation: navigation,
+                        viewport: TranscriptViewport(centerVisibleMessageID: messages[3].id),
+                        localizer: Localizer(language: .english), reduceMotion: false, increasedContrast: false)
+        #expect(input.currentID == messages[2].id)
+        #expect(input.hoveredID == messages[0].id && input.previewText == messages[0].content)
+        input.configure(model: model, conversationID: railConversation, navigation: navigation,
+                        viewport: viewport, localizer: Localizer(language: .english),
+                        reduceMotion: false, increasedContrast: false)
         #expect(input.geometry.cell(for: 0) == cell)
         let popup = try #require(NSApplication.shared.windows.first { $0.isVisible && $0 !== window && railFind($0.contentView ?? NSView(), NSTextView.self).contains { $0.string == messages[0].content } })
         let popupContent = try #require(popup.contentView)
@@ -325,10 +334,11 @@ extension NativeUITests {
         try await railSettle { store.messages.last?.status == .streaming }
         #expect(navigation.viewport == viewport && navigation.scrollRequest == nil)
         #expect(input.currentID == store.messages[2].id)
+        let retainedCursor = try #require(input.cursorID)
         navigation.viewport = TranscriptViewport(centerVisibleMessageID: MessageID("missing"))
         try await railSettle { input.currentID == nil }
         input.keyDown(with: try railKey(36, window))
-        #expect(navigation.scrollRequest?.messageID == store.messages[0].id)
+        #expect(navigation.scrollRequest?.messageID == retainedCursor)
         await store.selectConversation(ConversationID("rail:other"))
         try await railSettle { input.model.inputs.count == 1 && navigation.scrollRequest == nil }
         #expect(input.hoveredID == nil && input.cursorID == nil && input.currentID == nil)
@@ -380,6 +390,48 @@ extension NativeUITests {
         scroll.reflectScrolledClipView(clip)
         try await railSettle { input.currentID == messages[0].id }
         try railCapture(host, "prompt-rail-actual-transcript-400")
+    }
+
+    @Test func shortTurnJumpsKeepKeyboardTargetAfterCenterMoves() async throws {
+        let messages = railMessages(24)
+        let backend = RailTestBackend(messages: messages)
+        let store = ChatStore(backend: backend)
+        let navigation = TranscriptNavigation()
+        let observation = Task { await store.start() }
+        defer { observation.cancel() }
+        try await railSettle { store.messages.count == messages.count }
+        let host = NSHostingView(rootView: HStack(spacing: 0) {
+            TranscriptView(store: store, navigation: navigation)
+            PromptRail(store: store, navigation: navigation)
+        }.environment(\.locale, Locale(identifier: "en")))
+        host.sizingOptions = []
+        let window = railWindow(host, width: 760, height: 720)
+        defer { window.close() }
+        try await railSettle { navigation.viewport.lastVisibleMessageID == messages.last?.id }
+        let input = try #require(railFind(host, PromptRailInputView.self).first)
+        #expect(window.makeFirstResponder(input))
+        input.keyDown(with: try railKey(115, window))
+        try await railSettle { navigation.viewport.firstVisibleMessageID == messages[0].id }
+        try await railSettle { input.currentID != messages[0].id }
+        #expect(input.cursorID == messages[0].id)
+        let focusRing = try #require(input.layer?.sublayers?.compactMap { $0 as? CAShapeLayer }.first)
+        #expect(!focusRing.isHidden && (focusRing.path?.boundingBox.height ?? 0) >= 8)
+        for index in [1, 2] {
+            input.keyDown(with: try railKey(125, window))
+            #expect(navigation.scrollRequest?.messageID == messages[index * 2].id)
+            try await railSettle { navigation.viewport.firstVisibleMessageID == messages[index * 2].id }
+            #expect(input.cursorID == messages[index * 2].id)
+            #expect((input.accessibilityValue() as? String)?.hasSuffix(messages[index * 2].content) == true)
+        }
+        input.keyDown(with: try railKey(119, window))
+        try await railSettle { navigation.viewport.lastVisibleMessageID == messages.last?.id }
+        try await railSettle { input.currentID != messages[messages.count - 2].id }
+        #expect(input.cursorID == messages[messages.count - 2].id)
+        input.keyDown(with: try railKey(126, window))
+        #expect(navigation.scrollRequest?.messageID == messages[messages.count - 4].id)
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(input.cursorID == messages[messages.count - 4].id)
+
     }
 
     @Test func reduceMotionAndIncreasedContrastKeepReadableNativeBarsAndStableCells() throws {

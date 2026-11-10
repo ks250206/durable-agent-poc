@@ -220,8 +220,8 @@ Up/Down, Home/End and AX increment/decrement reach every input and jump to its e
 Return/Space/AX press repeat a jump. Tab/Shift-Tab leave the single native roving focus participant.
 Its AX value includes the ordinal, total and **entire original input text**. The keyboard cursor and
 hover are independent of the measured current turn; only actual transcript measurement changes that
-highlight. Manual transcript scrolling returns keyboard navigation to the measured turn and reveals
-it in the rail. Streaming updates never issue a jump or change the reader's scroll position.
+highlight. Manual transcript scrolling updates only the measured current marker. An active keyboard target
+or hover preview remains independent; without either, the rail reveals the measured turn. Streaming updates never issue a jump or change the reader's scroll position.
 
 Hover uses a bounded native popover containing selectable, scrollable, read-only plain text, verbatim
 including whitespace/Markdown-looking content. AppKit positions it against screen edges; it is a
