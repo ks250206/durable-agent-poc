@@ -254,7 +254,11 @@ opening/failure/demo states. It injects the reference, uses public `@ChatAppeara
 `ResolvedAppearance`, applies `preferredColorScheme` and updates the **existing owning NSWindow**
 through a non-interactive native anchor. Explicit choices assign Aqua/Dark Aqua; System assigns nil
 to release the window override and follow live AppKit inheritance. No window/store/editor/navigation
-identity is keyed by the choice and there is no lifecycle observer or cached System scheme.
+identity is keyed by the choice. A weak KVO observation of AppKit's effective application
+appearance supplies the live System scheme; it is invalidated with the anchor. This read-only
+bridge also explicitly updates the SwiftUI color-scheme environment: during marked text,
+SwiftUI can otherwise retain its previous forced scheme on the native editor's platform host
+after `preferredColorScheme` is cleared. No framework-owned view is mutated or replaced.
 Each anchor fills its owning presentation for its lifetime; do not move/remove it while retaining the
 same window with a different appearance owner without first releasing that window override.
 
@@ -287,6 +291,9 @@ The existing foundation also exercises injected live System-scheme changes. The 
 fixture test changes language and appearance while streaming and retaining marked text, selection,
 first responder, draft, undo manager/availability, store/navigation/conversation/model and canonical
 failure; no extra CLI probes occur. Stop still targets the original turn after switching to Cursor.
+The CI regression is also exercised under both light and dark process-local test appearances,
+including changes while System is selected and composition is still active. Only the serialized
+test executable seeds `NSApp.appearance`, restoring it afterward; production only reads it.
 Persistence/reopen/invalid repair, independent resets, unrelated preference sentinels, normal shutdown,
 startup failure and quit-during-opening suite cleanup pass without personal preference domains.
 

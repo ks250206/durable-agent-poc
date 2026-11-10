@@ -387,7 +387,12 @@ extension NativeAppTests {
         await session.shutdown()
     }
 
-    @Test func sharedAppLanguageChangesDuringCodexStreamingPreserveNativeCompositionOwnersAndCanonicalFailure() async throws {
+    @Test(arguments: [false, true]) func sharedAppLanguageChangesDuringCodexStreamingPreserveNativeCompositionOwnersAndCanonicalFailure(systemDark: Bool) async throws {
+        _ = NSApplication.shared
+        // Seed only this serialized test executable's ambient appearance, never OS preferences.
+        let originalAppAppearance = NSApplication.shared.appearance
+        NSApplication.shared.appearance = NSAppearance(named: systemDark ? .darkAqua : .aqua)
+        defer { NSApplication.shared.appearance = originalAppAppearance }
         let session = AppSession(arguments: ["--test-runtime"])
         await session.start()
         let store = try #require(session.store), settings = try #require(session.settings)
@@ -428,7 +433,8 @@ extension NativeAppTests {
             for theme in AppearanceChoice.allCases {
                 appearance.choice = theme
                 try await appLocalizedSettle {
-                    let expected = theme == .system ? NSApplication.shared.effectiveAppearance.name : appearance.resolve(systemColorScheme: .light).nsAppearance.name
+                    let expected = theme == .system ? NSApplication.shared.effectiveAppearance.name
+                        : appearance.resolve(systemColorScheme: .light).nsAppearance.name
                     return host.window.effectiveAppearance.name == expected && editor.effectiveAppearance.name == expected
                 }
                 try await appLocalizedSettle { editor.accessibilityLabel() == localization.string("Message", table: .chatUI) }
@@ -443,6 +449,18 @@ extension NativeAppTests {
                 #expect(store.isSending && store.selectedConversationID == origin && store.modelSelection == model)
                 #expect(navigation.viewport == viewport && navigation.scrollRequest?.id == request?.id)
             }
+        }
+        appearance.resetToSystem()
+        for ambient in [NSAppearance.Name.aqua, .darkAqua, .aqua] {
+            NSApplication.shared.appearance = NSAppearance(named: ambient)
+            try await appLocalizedSettle {
+                host.window.appearance == nil && host.window.effectiveAppearance.name == ambient
+                    && editor.effectiveAppearance.name == ambient
+            }
+            #expect(host.descendants(CompositionNSTextView.self).first === editor)
+            #expect(editor.string == text && editor.markedRange() == marked && editor.selectedRange() == selection)
+            #expect(editor.undoManager === undo && host.window.firstResponder === editor)
+            #expect(store.draft == draft && store.isSending)
         }
         #expect(try fixtureCalls(root).count == calls) // Appearance/locale do not rediscover providers or restart generation.
         editor.insertText("日本", replacementRange: editor.markedRange())
