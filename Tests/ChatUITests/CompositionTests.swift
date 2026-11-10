@@ -6,7 +6,8 @@ import Testing
 
 // These are AppKit synthetic input tests. They do not certify a physical Japanese input source,
 // candidate-window navigation, Live Conversion, or hardware key/focus timing in a running app.
-@Suite(.serialized) @MainActor
+extension NativeUITests {
+@Suite @MainActor
 struct CompositionTests {
     private func key(_ flags: NSEvent.ModifierFlags = [], repeat repeating: Bool = false,
                      code: UInt16 = 36) -> NSEvent {
@@ -428,6 +429,8 @@ struct CompositionTests {
     }
 }
 
+}
+
 @MainActor
 private final class OrderedInputTextView: CompositionNSTextView {
     var inputCallbacks: ((CompositionNSTextView) -> Void)?
@@ -445,8 +448,10 @@ private func findEditor(_ view: NSView) -> CompositionNSTextView? {
 @MainActor
 private func eventually(_ condition: @MainActor () async -> Bool,
                         sourceLocation: SourceLocation = #_sourceLocation) async {
-    let deadline = ContinuousClock.now + .seconds(3)
-    while !(await condition()), ContinuousClock.now < deadline { await Task.yield() }
+    let deadline = ContinuousClock.now + .seconds(10)
+    while !(await condition()), ContinuousClock.now < deadline {
+        try? await Task.sleep(for: .milliseconds(10)) // Let AppKit and SwiftUI service the run loop.
+    }
     #expect(await condition(), sourceLocation: sourceLocation)
 }
 

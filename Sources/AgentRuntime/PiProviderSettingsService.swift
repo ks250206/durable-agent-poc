@@ -206,7 +206,7 @@ public actor PiProviderSettingsService: ProviderSettingsService {
             guard account.providerID != "openai-codex", provider.acceptsAPIKey else { throw unsupported }
         case .chatGPT:
             guard account.providerID == "openai-codex", provider.oauth != nil else { throw unsupported }
-        case .cursor: throw unsupported
+        case .cursor, .codexCLI: throw unsupported
         }
     }
 

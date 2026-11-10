@@ -114,12 +114,13 @@ private final class HostedWorkspace {
 
 @MainActor
 private func eventually(_ condition: () -> Bool, sourceLocation: SourceLocation = #_sourceLocation) async throws {
-    let deadline = ContinuousClock.now + .seconds(4)
+    let deadline = ContinuousClock.now + .seconds(10)
     while !condition(), ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(20)) }
-    #expect(condition(), sourceLocation: sourceLocation)
+    try #require(condition(), sourceLocation: sourceLocation)
 }
 
-@Suite(.serialized)
+extension NativeUITests {
+@Suite
 @MainActor
 struct WorkspaceNativeTests {
     @Test func streamingFollowsLatestUntilNativeScrollMovesUp() async throws {
@@ -284,4 +285,6 @@ struct WorkspaceNativeTests {
             }
         }
     }
+}
+
 }

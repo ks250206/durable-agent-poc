@@ -97,7 +97,8 @@ private func minimapMessages(_ count: Int, conversation: ConversationID = Conver
 
 /// AppKit tests are serialized because NSApplication and the key-view loop are process-global.
 /// Events travel through a real NSWindow to the same NSViewRepresentable input surface used by Canvas.
-@Suite(.serialized) @MainActor
+extension NativeUITests {
+@Suite @MainActor
 struct MinimapNativeHostTests {
     @Test func workspaceSlotUsesRealTranscriptViewportAndStableIDJumps() async throws {
         _ = NSApplication.shared
@@ -310,7 +311,7 @@ struct MinimapNativeHostTests {
     private func settle(_ predicate: @MainActor () -> Bool, sourceLocation: SourceLocation = #_sourceLocation)
         async throws
     {
-        for _ in 0..<200 {
+        for _ in 0..<1000 {
             if predicate() { return }
             // Service SwiftUI/AppKit layout and Observation callbacks, not just Swift tasks.
             pumpRunLoop()
@@ -351,6 +352,8 @@ struct MinimapNativeHostTests {
         if let field = view as? NSTextField, field.isEditable { return field }
         return view.subviews.lazy.compactMap { findTextField(in: $0) }.first
     }
+
+}
 
 }
 

@@ -1,13 +1,14 @@
 import Foundation
 
 public enum ProviderOption: String, CaseIterable, Identifiable, Codable, Sendable {
-    case apiKey, chatGPT, cursor
+    case apiKey, chatGPT, cursor, codexCLI
     public var id: Self { self }
     public var displayName: String {
         switch self {
         case .apiKey: "API key"
         case .chatGPT: "ChatGPT"
         case .cursor: "Cursor"
+        case .codexCLI: "Codex CLI"
         }
     }
 }
