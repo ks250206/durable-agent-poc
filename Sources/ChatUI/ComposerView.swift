@@ -1,4 +1,5 @@
 import AppKit
+import AppLocalization
 import ChatCore
 import Observation
 import SwiftUI
@@ -12,6 +13,7 @@ private typealias ComposerState<Value> = SwiftUI.State<Value>
 /// during streaming. Physical Japanese IME GUI QA is separate from the AppKit synthetic tests.
 @MainActor
 public struct ComposerView: View {
+    @ChatLocalization private var localization
     @Bindable private var store: ChatStore
     @ComposerState<ComposerInput> private var input = ComposerInput()
 
@@ -25,16 +27,17 @@ public struct ComposerView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(.quaternary))
             HStack {
-                Text("Enter to send · Shift+Enter for a new line")
+                Text(localization.chat("Enter / ⌘Enter to send · Shift+Enter for a new line\nConfirm IME composition before sending."))
                     .font(.caption)
+                    .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(.secondary)
                 Spacer()
                 if store.isSending {
-                    Button("Stop", systemImage: "stop.fill") { input.stop(store: store) }
-                        .disabled(input.isStopping)
+                    Button(localization.chat("Stop"), systemImage: "stop.fill") { input.stop(store: store) }
+                        .disabled(input.isStopping).fixedSize()
                 }
-                Button("Send", systemImage: "arrow.up") { input.submit(store: store) }
-                    .disabled(!input.canSubmit(store: store))
+                Button(localization.chat("Send"), systemImage: "arrow.up") { input.submit(store: store) }
+                    .disabled(!input.canSubmit(store: store)).fixedSize()
             }
         }
         .padding(12)

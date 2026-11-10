@@ -40,7 +40,7 @@ struct TestCatalog {
     #expect(LocalizationValidation.issues().isEmpty)
     #expect(LocalizationValidation.keys(table: .common).contains("Reset to System"))
     // Follow-up tables must not masquerade as complete with English placeholder translations.
-    for table in [LocalizationTable.chatUI, .runtime, .app] {
+    for table in [LocalizationTable.runtime, .app] {
         #expect(LocalizationValidation.keys(table: table).isEmpty)
         #expect(LocalizationValidation.issues(tables: [table]).count == 4)
     }

@@ -1,3 +1,4 @@
+import AppLocalization
 import ChatCore
 import SwiftUI
 
@@ -5,6 +6,7 @@ import SwiftUI
 /// Composer (#5) and minimap (#6) enter as typed ViewBuilder slots; settings enter the App's Settings scene.
 @MainActor
 public struct ChatShellView<Composer: View, Minimap: View>: View {
+    @ChatLocalization private var localization
     private let store: ChatStore
     private let composer: Composer
     private let minimap: Minimap
@@ -24,11 +26,13 @@ public struct ChatShellView<Composer: View, Minimap: View>: View {
             VStack(spacing: 16) {
                 Text("DurableChat").font(.title)
                 if store.connection == .demo {
-                    Text("DEMO — read-only sample data").font(.headline)
-                    Text("\(store.conversations.count) sample conversation; \(store.messages.count) sample messages.")
+                    Text(localization.chat("DEMO — read-only sample data")).font(.headline)
+                    Text(verbatim: localization.chat("{conversations}; {messages}.", [
+                        "conversations": .string(localization.chatCount(store.conversations.count, one: "{count} sample conversation", other: "{count} sample conversations")),
+                        "messages": .string(localization.chatCount(store.messages.count, one: "{count} sample message", other: "{count} sample messages"))]))
                 } else {
-                    Text("No backend connected")
-                    Text("Choose and configure a provider when runtime integration is installed.")
+                    Text(localization.chat("No backend connected"))
+                    Text(localization.chat("Choose and configure a provider when runtime integration is installed."))
                         .foregroundStyle(.secondary)
                 }
                 composer
@@ -38,7 +42,7 @@ public struct ChatShellView<Composer: View, Minimap: View>: View {
         }
         .padding(24)
         .frame(minWidth: 480, minHeight: 320)
-        .accessibilityLabel("DurableChat application shell")
+        .accessibilityLabel(localization.chat("DurableChat application shell"))
     }
 }
 

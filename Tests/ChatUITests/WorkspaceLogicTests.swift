@@ -1,6 +1,7 @@
+import AppLocalization
 import ChatCore
-import Foundation
 @testable import ChatUI
+import Foundation
 import Testing
 
 @Test func conversationSearchFoldsAccentsUsesAllTermsAndPreservesBackendOrder() {
@@ -13,7 +14,7 @@ import Testing
     #expect(ConversationFilter.matching(summaries, query: "  CAFE\n swiftui ").map(\.id) == summaries.prefix(2).map(\.id))
     #expect(ConversationFilter.matching(summaries, query: " \n\t ") == summaries)
     #expect(ConversationFilter.matching(summaries, query: "missing").isEmpty)
-    #expect(ConversationFilter.matching(summaries, query: "untitled").map(\.id) == [ConversationID("blank")])
+    #expect(ConversationFilter.matching(summaries, query: "untitled", localizer: Localizer(language: .english)).map(\.id) == [ConversationID("blank")])
 }
 
 @Test func viewportUsesActualIntersectionsInTranscriptOrderIncludingOversizedRows() {
@@ -79,11 +80,11 @@ import Testing
 }
 
 @Test func connectionLabelsDistinguishReadOnlyConnectingAndFailures() {
-    #expect(ConnectionPresentation(.demo).title == "Demo · Read only")
-    #expect(ConnectionPresentation(.connecting).title == "Connecting…")
-    #expect(ConnectionPresentation(.connected).detail == nil)
-    #expect(ConnectionPresentation(.failed("Backend unavailable")).detail == "Backend unavailable")
-    #expect(ConnectionPresentation(.disconnected).title == "Disconnected")
+    #expect(ConnectionPresentation(.demo, localizer: Localizer(language: .english)).title == "Demo · Read only")
+    #expect(ConnectionPresentation(.connecting, localizer: Localizer(language: .english)).title == "Connecting…")
+    #expect(ConnectionPresentation(.connected, localizer: Localizer(language: .english)).detail == nil)
+    #expect(ConnectionPresentation(.failed("Backend unavailable"), localizer: Localizer(language: .english)).detail == "Backend unavailable")
+    #expect(ConnectionPresentation(.disconnected, localizer: Localizer(language: .english)).title == "Disconnected")
 }
 
 @Test func messageLinksOnlyOpenWebSchemes() {

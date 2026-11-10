@@ -1,9 +1,11 @@
 import AppKit
+import AppLocalization
 import SwiftUI
 
 /// The editor stays enabled while the store streams. Only committed text is written to the binding.
 @MainActor
 struct CompositionTextView: NSViewRepresentable {
+    @ChatLocalization private var localization
     @Binding var text: String
     let input: ComposerInput
     let onSubmit: () -> Void
@@ -28,7 +30,8 @@ struct CompositionTextView: NSViewRepresentable {
         editor.autoresizingMask = [.width]
         editor.textContainer?.widthTracksTextView = true
         editor.textContainer?.containerSize = NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
-        editor.setAccessibilityLabel("Message")
+        editor.setAccessibilityLabel(localization.chat("Message"))
+        editor.setAccessibilityHelp(localization.chat("Enter or Command+Enter sends committed text. Shift+Enter inserts a new line. Confirm IME composition before sending."))
         editor.string = text
         context.coordinator.editor = editor
         editor.delegate = context.coordinator
@@ -46,6 +49,8 @@ struct CompositionTextView: NSViewRepresentable {
     func updateNSView(_ scroll: NSScrollView, context: Context) {
         context.coordinator.parent = self
         guard let editor = scroll.documentView as? CompositionNSTextView else { return }
+        editor.setAccessibilityLabel(localization.chat("Message"))
+        editor.setAccessibilityHelp(localization.chat("Enter or Command+Enter sends committed text. Shift+Enter inserts a new line. Confirm IME composition before sending."))
         editor.synchronize(draft: text)
     }
 

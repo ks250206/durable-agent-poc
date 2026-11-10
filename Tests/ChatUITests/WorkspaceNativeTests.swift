@@ -1,4 +1,5 @@
 import AppKit
+import AppLocalization
 import ChatCore
 @testable import ChatUI
 import SwiftUI
@@ -78,7 +79,7 @@ private final class HostedWorkspace {
 
     init<V: View>(_ view: V, width: CGFloat, height: CGFloat = 720) {
         _ = NSApplication.shared
-        host = NSHostingView(rootView: AnyView(view))
+        host = NSHostingView(rootView: AnyView(view.environment(\.locale, Locale(identifier: "en"))))
         host.sizingOptions = []
         window = NSWindow(contentRect: NSRect(x: -16000, y: -16000, width: width, height: height),
                           styleMask: [.borderless], backing: .buffered, defer: false)
