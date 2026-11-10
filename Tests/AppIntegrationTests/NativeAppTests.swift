@@ -557,3 +557,93 @@ private actor FailingPresentationSettingsFixture: ProviderSettingsService {
     func cancelLogin(to account: ProviderAccount) async {}
     func logout(from account: ProviderAccount) async throws {}
 }
+
+extension NativeAppTests {
+    /// Final aggregate: a real fixture turn stopped in another account, then reopened with the
+    /// same explicitly selected model and language. Locale changes must issue no extra CLI calls.
+    @Test func finalFourLanguageCodexHistoryAndAccountIsolationWithLiveMinimap() async throws {
+        for choice in [LanguageChoice.english, .japanese, .simplifiedChinese, .korean] {
+            let suite = "DurableChat.FinalQA.\(UUID())"
+            let defaults = try #require(UserDefaults(suiteName: suite))
+            defer { defaults.removePersistentDomain(forName: suite) }
+            let localization = LocalizationSettings(defaults: defaults, preferredLanguages: { ["en"] })
+            localization.choice = choice
+            let session = AppSession(arguments: ["--test-runtime"], localization: localization)
+            do {
+                await session.start()
+                let store = try #require(session.store), settings = try #require(session.settings)
+                let root = try #require(session.testDirectory)
+                let statuses = try await settings.snapshot()
+                let status = try #require(statuses.first { $0.configuration.account == CodexProviderSettingsService.account })
+                #expect(status.configuration.selectedModelID == nil && status.authentication == .configured)
+                let model = try #require(status.models.first?.id)
+                await session.useModel(model)
+                try await eventually { store.modelSelection == model && store.selectedConversationID == nil }
+                let origin = try #require(await store.createConversation(title: "Final QA 日本語 {count} %n"))
+                try await eventually { store.canSend }
+                #expect(await store.send("Final four-language fixture turn"))
+                try await eventually { store.messages.last?.content.contains("SIMULATED Codex") == true }
+                let cursor = ConversationID("cursor:conversation:simulated-history")
+                await store.selectConversation(cursor)
+                try await eventually { store.messages.count == 48 && store.selectedConversationID == cursor }
+                #expect(store.modelSelection == nil && !store.canSend)
+                let callsBefore = try fixtureCalls(root).count
+                let host = HostedApp(NativeWorkspaceView(session: session), width: 1200)
+                defer { host.close() }
+                try await appLocalizedSettle { host.descendants(MinimapInputView.self).count == 1 }
+                let map = try #require(host.descendants(MinimapInputView.self).first)
+                #expect(map.accessibilityLabel() == localization.string("Conversation map", table: .chatUI))
+                try await appLocalizedSettle { session.navigation.viewport.lastVisibleMessageID == store.messages.last?.id }
+                #expect(host.window.makeFirstResponder(map))
+                map.keyDown(with: try #require(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+                    windowNumber: host.window.windowNumber, context: nil, characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: 116)))
+                try await appLocalizedSettle { session.navigation.scrollRequest != nil }
+                let target = try #require(session.navigation.scrollRequest?.messageID)
+                try await appLocalizedSettle { session.navigation.viewport.firstVisibleMessageID == target }
+                let request = session.navigation.scrollRequest?.id
+                localization.choice = choice == .english ? .japanese : .english
+                try await appLocalizedSettle { map.accessibilityLabel() == localization.string("Conversation map", table: .chatUI) }
+                localization.choice = choice
+                try await appLocalizedSettle { map.accessibilityLabel() == localization.string("Conversation map", table: .chatUI) }
+                #expect(host.descendants(MinimapInputView.self).first === map && host.window.firstResponder === map)
+                #expect(session.navigation.scrollRequest?.id == request && store.selectedConversationID == cursor)
+                #expect(try fixtureCalls(root).count == callsBefore) // Presentation never re-probes or starts a turn.
+                await store.stop(conversationID: origin)
+                try await eventually { store.loadedConversations[origin]?.activity == .idle }
+                #expect(store.selectedConversationID == cursor && store.messages.count == 48)
+                let stopped = try #require(store.loadedConversations[origin])
+                #expect(stopped.messages.last?.status == .stopped)
+                #expect(stopped.messages.allSatisfy { !$0.content.contains("LATE AFTER STOP") })
+                try host.capture("issue24-minimap-origin-stop-\(localization.language.resourceIdentifier)-1200")
+                host.close()
+                await store.selectConversation(origin)
+                try await eventually { store.canSend && store.modelSelection == model }
+                let saved = store.messages
+                let copy = FileManager.default.temporaryDirectory.appendingPathComponent("DurableChat-FinalReopen-\(UUID())")
+                try FileManager.default.copyItem(at: root, to: copy)
+                defer { try? FileManager.default.removeItem(at: copy) }
+                let calls = try fixtureCalls(root)
+                await session.shutdown()
+                #expect(!FileManager.default.fileExists(atPath: root.path))
+                for call in calls where ["launch", "owned-child"].contains(call["method"] as? String ?? "") {
+                    #expect(kill(try #require(call["pid"] as? Int32), 0) != 0)
+                }
+                let reopened = AppSession(arguments: ["--test-runtime"], isolatedDirectory: copy,
+                    localization: LocalizationSettings(defaults: defaults, preferredLanguages: { ["ko"] }))
+                await reopened.start()
+                let restored = try #require(reopened.store)
+                try await eventually { restored.selectedConversationID == origin && restored.canSend }
+                #expect(reopened.localization.choice == choice && restored.messages == saved && restored.modelSelection == model)
+                let narrow = HostedApp(NativeWorkspaceView(session: reopened), width: 400)
+                try await appLocalizedSettle { appAXLabels(narrow.host).contains(reopened.localization.string("Response stopped", table: .chatUI)) }
+                try narrow.capture("issue24-codex-language-reopen-\(reopened.localization.language.resourceIdentifier)-400")
+                narrow.close()
+                await reopened.shutdown()
+                #expect(!FileManager.default.fileExists(atPath: copy.path))
+            } catch {
+                await session.shutdown()
+                throw error
+            }
+        }
+    }
+}

@@ -22,7 +22,9 @@ export DEVELOPER_DIR=/Library/Developer/CommandLineTools
 export PATH="$DEVELOPER_DIR/usr/bin:$PATH"
 swift build --build-system swiftbuild
 swift test -Xswiftc -plugin-path -Xswiftc "$DEVELOPER_DIR/usr/lib/swift/host/plugins/testing"
+scripts/validate-localization.sh
 scripts/build-app.sh
+scripts/validate-localization.sh dist/DurableChat.app
 open dist/DurableChat.app
 ```
 
@@ -115,8 +117,8 @@ Existing AppKit tests cover synthetic marked text, confirmation Enter, Shift+Ent
 submission gating. These are separate from physical input-method testing.
 
 The [macOS workflow](.github/workflows/macos.yml) uses the official `xcode-27` runner, explicitly selects installed
-Xcode 27.2 (or CLT with verified 27.2 SDK), builds, runs all tests with native WindowServer requirements, packages
-and uploads an ad-hoc-signed app archive and PNGs. Actions are pinned to commit SHAs with read-only repository
+Xcode 27.2 (or CLT with verified 27.2 SDK), builds, runs all tests with native WindowServer requirements,
+validates the source inventory and all source/packaged translation tables, packages and uploads an ad-hoc-signed app archive and PNGs. Actions are pinned to commit SHAs with read-only repository
 permissions. Availability/toolchain sources: [runner announcement](https://github.com/actions/runner-images/issues/14404)
 and [official image manifest](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md).
 CI success must be read from the actual PR checks; workflow configuration alone is not a CI pass.
@@ -129,7 +131,8 @@ and subscription entitlement are **unverified**.
 PiDurableKit remains pinned in the manifest and lockfile at `4e1120bbdc7c5329a2f3c05a22bec4b9c9a076bb`.
 Component contracts: [shared API](docs/SharedContracts.md), [Pi runtime](docs/PiRuntime.md),
 [Cursor runtime](docs/CursorRuntime.md), [Codex runtime](docs/CodexRuntime.md). Issues #9 and #21 supply
-application composition and routing. Localization work remains separate in #22/#23.
+application composition and routing. Four-language UI/settings integration from #22/#23 and final
+repository validation from #24 are connected; see [the localization audit](scripts/localization/README.md).
 
 ### App language
 
@@ -139,3 +142,12 @@ app-owned menus and existing diagnostics update together while the editor and ac
 in place. Conversation text, titles, model names and external errors remain verbatim. Demo and
 `--test-runtime` use disposable language preferences; production preferences are not used for QA.
 See [localization contracts and ownership](docs/Localization.md) for details.
+
+Final QA artifacts are generated under ignored `dist/`: `DurableChat.app`,
+`DurableChat-macOS.zip`, and `qa/issue-24/` (logs/native PNGs/GUI evidence). The archive uses
+`ditto --sequesterRsrc --keepParent`; CI extracts it and rechecks every translation and the
+strict/deep signature. Rebuild these from merged main before retaining a release: an isolated
+T3 implementation worktree may be deleted after merge. See the final verification matrix and
+reproduction commands in [Integration.md](docs/Integration.md). Translation key/format parity
+certifies resource coverage, not linguistic quality. macOS-owned menus follow the OS locale;
+app-owned Settings and Quit commands use the app's selected language.

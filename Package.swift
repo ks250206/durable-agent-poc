@@ -7,6 +7,7 @@ let package = Package(
     platforms: [.macOS(.v14)],
     products: [
         .executable(name: "DurableChat", targets: ["DurableChatApp"]),
+        .executable(name: "LocalizationAudit", targets: ["LocalizationAudit"]),
         .library(name: "ChatCore", targets: ["ChatCore"]),
         .library(name: "ChatUI", targets: ["ChatUI"]),
         .library(name: "AgentRuntime", targets: ["AgentRuntime"]),
@@ -28,7 +29,9 @@ let package = Package(
         .executableTarget(name: "DurableChatApp", dependencies: [
             "ChatCore", "ChatUI", "AgentRuntime", "AppLocalization", .product(name: "PiDurableKit", package: "PiDurableKit"),
         ]),
-        .testTarget(name: "AppIntegrationTests", dependencies: ["DurableChatApp", "ChatCore", "ChatUI", "AgentRuntime"]),
+        .executableTarget(name: "LocalizationAudit", dependencies: ["AppLocalization"],
+            path: "scripts/localization/Sources"),
+        .testTarget(name: "AppIntegrationTests", dependencies: ["DurableChatApp", "ChatCore", "ChatUI", "AgentRuntime", "LocalizationAudit"]),
         .testTarget(name: "ChatCoreTests", dependencies: ["ChatCore"]),
         .testTarget(name: "AppLocalizationTests", dependencies: ["AppLocalization"]),
         .testTarget(name: "ChatUITests", dependencies: ["ChatUI", "ChatCore"]),

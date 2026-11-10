@@ -1,4 +1,80 @@
-# Application integration (#9, #21)
+# Application integration and final QA (#24)
+
+## Final #24 verification and parent handoff (2026-11-10)
+
+Local final result: **139 Swift tests passed** (ChatUI 42, ChatCore 14, AppLocalization 11,
+AppIntegration 17, AgentRuntime 55), plus **2 Python audit tests**. CLT Swift 6.4.2 / SDK 27.2.
+Existing CLT missing Developer library/framework search-path warnings and AX compatibility API
+deprecations remain nonfatal.
+
+The final integration adds the source/resource audit, CI gates and aggregate tests. It reuses the
+#19–#23 runtime/localization implementations without changing backend behavior or translating data.
+The manifest strictly accounts for Common 10 / ChatUI 104 / Runtime 108 / App 13 keys in each locale,
+plus all string sites in 42 Swift source files. Table/language iteration derives from the owning enums;
+future UI resources can extend those contracts and the audited manifest together. There is no fixed
+key-count or four-table ceiling. Unregistered resource tables/locales and source strings still fail.
+
+| Surface | Current local evidence | Limits |
+| --- | --- | --- |
+| Translation inventory/format | Source audit; exact key sets, empty/malformed/mismatched templates, missing/extra keys, actual Foundation lookup in every source and packaged table; mutation and manifest-growth tests | Coverage/parity does not prove linguistic quality; source inventory is an audited string-site boundary, not general Swift data-flow analysis |
+| Workspace/settings/providers/errors/AX/minimap | Complete native NSHostingView suites rerun in en/ja/zh-Hans/ko at 400/1200 pt, light/dark; fresh PNGs and AX assertions | Native hosting is distinct from the running packaged app and VoiceOver |
+| Language/editor lifecycle | Immediate change, injected defaults reopen/invalid fallback/System reset and activation/locale notifications; real composer marked text, selection, focus, draft, navigation and owners preserved during actual fixture streaming | Marked text is synthetic AppKit, not a physical Japanese IME/candidate-window pass |
+| Final four-language aggregate | Codex fixture account → explicit model → send; switch to Cursor's 48-message history; localized minimap Page Up and preserved focus/target; Stop captured Codex origin; reject late text; copied archive reopens language/model/messages; owned processes/temp roots removed | Copied temporary archive proves process/session reopen without personal settings; interactive fixture intentionally deletes storage/preferences at Quit |
+| Actual packaged GUI via CUA | English/Japanese/Chinese/Korean settings/workspace/AX, mock Codex login/help/quota and explicit model selection; send/stream; Japanese then Chinese then System-English while busy; exact Unicode draft retained; Stop; Cursor account isolation; minimap exact message 8 of 48; reopen stopped Codex history and Settings with model retained | Desktop/system-dark CUA run; exact 400/1200 and both appearances are native-host evidence, not a claimed packaged GUI matrix |
+| Existing packaged settings error | Rejected a nonfixture executable path without launching it; open error retranslated in all four languages, active Codex route retained | Fixture-safe rejection only; no real CLI/authentication failure was requested |
+| App-owned commands | CUA observed live Settings/Quit labels in Japanese, Chinese and Korean; Reset to System restored English workspace; localized Quit completed cleanup | Stock macOS/SwiftUI commands follow OS locale; the stock English Settings entry was also visible beside the custom localized command |
+| Build/distribution | Release app, all actual packaged table lookups, strict/deep ad-hoc codesign; signature/resource checks repeated after zip extraction | No Developer ID, notarization, hardened-runtime distribution or production entitlement certification |
+| CI/independent review/merge | Workflow retains SHA pins, read-only permissions, Xcode/SDK 27.2 and all native tests; source, package and extracted-archive audits are required | Remote checks, independent review and merge are parent-owned, not certified by local results |
+
+The CUA model-popup attempt initially hit “The user changed … Re-query the latest state …”.
+Fresh full snapshots, visible scroll position and normal UI retries eventually selected the model;
+no stale guard was bypassed. The language popup also needed a fresh snapshot once. Some clicks
+returned AXError.failure while their action completed; the following full snapshot, not the error
+or attempted click, established the result. A standalone screenshot call was unavailable; combined
+AX/screenshot observations worked. These are recorded as tooling events, not application passes.
+The final packaged temporary root was removed by normal localized Quit and all nine recorded fixture
+process PIDs were absent afterward. The three added integration tests cover resource mutations,
+strict manifest growth, and the four-language native Codex/history/minimap aggregate.
+
+Real accounts, credential/token reads, installed CLI account/catalog/model requests, provider network
+calls and paid generation were not used. Physical Japanese IME/candidate windows, VoiceOver operation,
+live authentication/account entitlement and distribution signing remain **unverified**.
+
+Reproduce from this checkout (and rebuild again in the parent's checkout from merged main):
+
+```sh
+export DEVELOPER_DIR=/Library/Developer/CommandLineTools
+export PATH="$DEVELOPER_DIR/usr/bin:$PATH"
+mkdir -p dist/qa/issue-24
+scripts/validate-localization.sh
+swift build --build-system swiftbuild
+CHAT_UI_ARTIFACTS_DIR="$PWD/dist/qa/issue-24/native" \
+swift test -Xswiftc -plugin-path -Xswiftc /Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing
+scripts/build-app.sh
+scripts/validate-localization.sh dist/DurableChat.app
+codesign --verify --deep --strict dist/DurableChat.app
+ditto -c -k --sequesterRsrc --keepParent dist/DurableChat.app dist/DurableChat-macOS.zip
+archive_root="$(mktemp -d "$TMPDIR/DurableChat-archive.XXXXXX")"
+ditto -x -k dist/DurableChat-macOS.zip "$archive_root"
+codesign --verify --deep --strict "$archive_root/DurableChat.app"
+scripts/validate-localization.sh "$archive_root/DurableChat.app"
+rm -r "$archive_root"
+open -n dist/DurableChat.app --args --test-runtime
+```
+
+Interactive sequence: choose each language and reopen Settings; browse the Codex account, scroll to
+Model, explicitly choose SIMULATED Codex CLI (no AI), Use selected model, create a conversation,
+send/Stop and switch history. Paste a disposable Unicode draft to verify retention while streaming
+and switching languages. Use All messages → number → Go in Cursor history. Test invalid fixture
+path save for the nonsecret settings error; refresh restores the pinned fixture configuration.
+Quit normally and verify the exact temporary root/processes recorded during the run are gone.
+Do not use production preferences or accounts to expand QA coverage.
+
+Ignored local handoff artifacts: `dist/DurableChat.app`, `dist/DurableChat-macOS.zip`,
+`dist/qa/issue-24/` (command logs, fresh native PNGs, fixture-only process/call evidence and GUI notes).
+PNG names beginning `issue23-` are rerun by the final suite; they are **fresh #24 run evidence** from
+reused tests, not copied prior artifacts. Earlier issue records below retain their historical counts
+and original QA limits. Do not retain this worktree as a release source: T3 may delete it after merge.
 
 ## Composition and lifecycle API
 
@@ -47,7 +123,7 @@ all backend owners. It also awaits `CodexChatBackend.shutdown()` to terminate ev
 and release its lock while references remain alive; concurrent shutdown callers await the same boundary. Cursor's own deinit/process-group cancellation remains a second cleanup boundary.
 Settings shutdown also cancels CLI control invocations and calls `CodexProviderSettingsService.shutdown()`; there is no invented Cursor close API.
 
-## Issue #21 verification (2026-11-10)
+## Historical issue #21 verification (2026-11-10)
 
 The #19 Codex adapter/process/settings implementation is reused without protocol or credential changes.
 The app composes its third backend under `Application Support/DurableChat/Codex`. Construction starts no
@@ -143,7 +219,7 @@ The pinned upstream revision and `scripts/build-app.sh --build-system swiftbuild
   Viewing 1–2 of 48. This is running-app GUI evidence, separate from off-screen native hosting PNGs.
   A direct click/Home attempt did not establish minimap keyboard focus; the exact-number navigation path
   was then verified. Physical keyboard minimap focus/IME timing remains for independent GUI QA.
-- The actual app is left running in isolated test mode for parent CUA QA. Normal production credential
+- At the historical #9 handoff, the app was left running in isolated test mode for parent CUA QA. Normal production credential
   startup has not been interactively exercised, to avoid reading personal credentials for QA.
   Parent owns final independent CUA QA, cross-model review and CI waiting. No review or merge was run here.
   PR checks are reported from one exact-head query at handoff; local tests do not certify remote CI.
@@ -162,7 +238,7 @@ Refresh, close/reopen Settings, and switch away/back to its history to verify th
 Codex login/logout is instructions-only, and fixture mode rejects clearing/changing its executable to
 another CLI. Do not enter a real API key or attempt real account sign-in for this QA.
 
-## Issue #23 language integration
+## Issue #23 language integration and historical verification
 
 AppSession now owns one injectable LocalizationSettings, shared by the scenes, workspace, settings
 and commands. NativeSettingsView places the existing System/日本語/English/简体中文/한국어 picker and
