@@ -66,6 +66,16 @@ final class CodexStorageLock: @unchecked Sendable {
         guard descriptor >= 0 else { throw CodexRuntimeError.storage }
         guard flock(descriptor, LOCK_EX | LOCK_NB) == 0 else { close(descriptor); descriptor = -1; throw CodexRuntimeError.storage }
     }
-    func release() { lock.withLock { if descriptor >= 0 { close(descriptor); descriptor = -1 } } }
+    func release() {
+        lock.withLock {
+            if descriptor >= 0 {
+                // A concurrent fork may retain this open file description until exec.
+                // Explicitly unlock before close so shutdown doesn't depend on that child.
+                _ = flock(descriptor, LOCK_UN)
+                close(descriptor)
+                descriptor = -1
+            }
+        }
+    }
     deinit { release() }
 }

@@ -52,7 +52,7 @@ await settings.shutdown()
 
 Use an **app-owned** storage root, not a source checkout or the CLI's state directory. The root contains
 private `control/` and `workspace/` directories, preferences, conversations, and `runtime.lock`.
-The backend enforces exclusive ownership with flock. Constructors fail on corrupt/foreign archives;
+The backend enforces exclusive ownership with flock. Explicit shutdown unlocks before closing its descriptor, so a duplicate temporarily inherited during another process launch cannot retain ownership after shutdown. Constructors fail on corrupt/foreign archives;
 they never silently reset history. Files are replaced via a new 0600 temporary file, fsync, then rename;
 directories are 0700. Reads and writes share a 128 MiB encoded-file limit. Oversized updates fail before
 creating/replacing any file; the prior readable archive remains intact. No history is silently truncated. Direct symlink storage files/roots are rejected. CLI authentication never enters
