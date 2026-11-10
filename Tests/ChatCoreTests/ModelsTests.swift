@@ -19,12 +19,13 @@ import Testing
 @Test func providerRoutesAndModelIdentityRemainDistinct() throws {
     let api = ProviderAccount(option: .apiKey, providerID: "openai")
     let subscription = ProviderAccount(option: .chatGPT, providerID: "openai-codex")
+    let codex = ProviderAccount(option: .codexCLI, providerID: "codex-cli")
     let cursor = ProviderAccount(option: .cursor, providerID: "cursor")
-    #expect(Set([api, subscription, cursor]).count == 3)
+    #expect(Set([api, subscription, cursor, codex]).count == 4)
     #expect(ModelSelection(account: api, modelID: "same") != ModelSelection(account: subscription, modelID: "same"))
     let config = ProviderConfiguration(account: cursor, selectedModelID: "auto", executablePath: "/tmp/agent")
     #expect(try JSONDecoder().decode(ProviderConfiguration.self, from: JSONEncoder().encode(config)) == config)
-    #expect(ProviderOption.allCases == [.apiKey, .chatGPT, .cursor])
+    #expect(ProviderOption.allCases == [.apiKey, .chatGPT, .cursor, .codexCLI])
 }
 
 @Test func busyStatesAndEmptyDefaultsHaveExpectedMeaning() {

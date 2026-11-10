@@ -113,7 +113,8 @@ struct NativeAppTests {
         #expect(store.messages.last?.status == .stopped)
         await store.selectConversation(origin)
         try await eventually { store.modelSelection == piModel && store.selectedConversationID == origin }
-        #expect(session.navigation.scrollRequest == nil)
+        // Selection is committed before SwiftUI runs the transcript/minimap onChange reset.
+        try await eventually { session.navigation.scrollRequest == nil }
         await session.shutdown()
         #expect(!FileManager.default.fileExists(atPath: root.path))
     }
