@@ -17,6 +17,10 @@ The composer uses the shared 20pt radius, palette, editor font, focus stroke, sh
 spacing. Send and Stop use the existing `ComposerInput` gates. Editing remains enabled while
 streaming. The compact key hint has four translations; full IME and Command+Enter help stays
 on the native editor and tooltip. No duplicate model label or unsupported action is added.
+The editor measures a snapshot of its attributed text at the proposed wrapping width and
+grows from 44pt to the shared 180pt cap, then scrolls. Its live text container is untouched.
+The shadow belongs only to the rounded panel background, so editor and controls have no
+internal shadow seam.
 
 `CompositionTextView.updateNSView` applies concrete `nsAppearance`, text/font/background,
 insertion point, selection, and typing colors **to the same native editor**. It never swaps
@@ -32,6 +36,8 @@ schemes, real horizontal code scrolling, source preservation, 28pt copy targets,
 copy clicks using disposable pasteboards. Tests require `NSScreen`; they move oversized
 render windows to anchor each interactive target on the connected screen and assert its
 bounds rather than exempting targets on small CI displays.
+The test-only window keeps explicit positioning for oversized renders; every interaction
+must fit both the real screen and a simulated 1024×674pt CI placement on larger displays.
 
 The real Composer binding test forces Light/Dark against the opposite ambient scheme while
 changing locale and receiving stream events during marked text. It checks editor, storage,

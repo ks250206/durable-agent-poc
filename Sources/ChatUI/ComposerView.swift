@@ -24,8 +24,7 @@ public struct ComposerView: View {
         let palette = appearance.palette
         VStack(alignment: .leading, spacing: ChatTheme.Spacing.small) {
             CompositionTextView(text: $store.draft, input: input) { input.submit(store: store) }
-                .frame(minHeight: ChatTheme.Dimensions.composerMinHeight,
-                       idealHeight: 112, maxHeight: ChatTheme.Dimensions.composerMaxHeight)
+                .fixedSize(horizontal: false, vertical: true)
             HStack(alignment: .center, spacing: ChatTheme.Spacing.small) {
                 Text(localization.chat("↵ Send · ⇧↵ New line"))
                     .font(ChatTheme.Typography.caption)
@@ -44,12 +43,15 @@ public struct ComposerView: View {
             .padding(.leading, ChatTheme.Spacing.small)
         }
         .padding(ChatTheme.Spacing.medium)
-        .background(palette.composer.color, in: RoundedRectangle(cornerRadius: ChatTheme.Radii.composer))
+        .background {
+            RoundedRectangle(cornerRadius: ChatTheme.Radii.composer)
+                .fill(palette.composer.color)
+                .shadow(color: palette.shadow.color, radius: ChatTheme.Shadows.composerRadius,
+                        y: ChatTheme.Shadows.composerY)
+        }
         .overlay(RoundedRectangle(cornerRadius: ChatTheme.Radii.composer)
             .strokeBorder(input.isFocused ? palette.focus.color : palette.stroke.color.opacity(0.45),
                           lineWidth: input.isFocused ? appearance.focusWidth : appearance.strokeWidth))
-        .shadow(color: palette.shadow.color, radius: ChatTheme.Shadows.composerRadius,
-                y: ChatTheme.Shadows.composerY)
         .padding(ChatTheme.Spacing.medium)
     }
 

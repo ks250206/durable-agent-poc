@@ -13,6 +13,26 @@ struct CompositionTextView: NSViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView scroll: NSScrollView, context: Context) -> CGSize? {
+        guard let width = proposal.width, width > 0,
+              let editor = scroll.documentView as? CompositionNSTextView else { return nil }
+        // Measure a snapshot, never the live editor's text container: resizing must not
+        // disturb an input method's marked text, selection, layout or undo transaction.
+        let storage = NSTextStorage(attributedString: editor.attributedString())
+        let layout = NSLayoutManager()
+        let container = NSTextContainer(size: NSSize(
+            width: max(1, width - editor.textContainerInset.width * 2),
+            height: .greatestFiniteMagnitude))
+        container.lineFragmentPadding = editor.textContainer?.lineFragmentPadding ?? 5
+        storage.addLayoutManager(layout)
+        layout.addTextContainer(container)
+        layout.ensureLayout(for: container)
+        let textHeight = max(layout.usedRect(for: container).maxY, layout.extraLineFragmentRect.maxY)
+        let height = min(ChatTheme.Dimensions.composerMaxHeight,
+                         max(44, ceil(textHeight + editor.textContainerInset.height * 2)))
+        return CGSize(width: width, height: height)
+    }
+
     func makeNSView(context: Context) -> NSScrollView {
         let scroll = NSScrollView()
         scroll.hasVerticalScroller = true

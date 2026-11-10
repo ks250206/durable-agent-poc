@@ -36,17 +36,28 @@ private actor PresentationBackend: ChatBackend {
     }
 }
 
+@MainActor private final class PresentationRenderWindow: NSWindow {
+    // Oversized component renders intentionally exceed the CI display. Keep explicit
+    // target placement instead of AppKit moving the window back onto the screen.
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect { frameRect }
+}
+
 @MainActor private final class PresentationHost {
     let host: NSHostingView<AnyView>
     let window: NSWindow
     let screen: NSScreen
+    var interactiveFrame: NSRect {
+        let visible = screen.visibleFrame
+        return NSRect(x: visible.minX, y: visible.minY,
+                      width: min(1024, visible.width), height: min(674, visible.height))
+    }
 
     init<V: View>(_ view: V, width: CGFloat, height: CGFloat = 900) throws {
         _ = NSApplication.shared
         screen = try #require(NSScreen.main, "Native QA requires a display")
         host = NSHostingView(rootView: AnyView(view))
         host.sizingOptions = []
-        window = NSWindow(contentRect: NSRect(x: screen.visibleFrame.minX, y: screen.visibleFrame.maxY - height,
+        window = PresentationRenderWindow(contentRect: NSRect(x: screen.visibleFrame.minX, y: screen.visibleFrame.maxY - height,
                                               width: width, height: height),
                           styleMask: [.borderless], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
@@ -72,7 +83,7 @@ private actor PresentationBackend: ChatBackend {
     /// actual interactive target is on screen; never exempt it from screen bounds.
     func reveal(_ node: NSObject) throws {
         let rect = try frame(node)
-        let visible = screen.visibleFrame
+        let visible = interactiveFrame
         var origin = window.frame.origin
         if rect.minX < visible.minX { origin.x += visible.minX - rect.minX + 8 }
         if rect.maxX > visible.maxX { origin.x -= rect.maxX - visible.maxX + 8 }
@@ -132,6 +143,25 @@ private actor PresentationBackend: ChatBackend {
 
 extension NativeUITests {
 @Suite @MainActor struct MessagePresentationNativeTests {
+    @Test func composerStaysCompactForOneLineAndGrowsForMultilineInput() async throws {
+        let store = ChatStore(backend: PresentationBackend())
+        let observation = Task { await store.start() }
+        defer { observation.cancel() }
+        store.draft = "One line"
+        let hosted = try PresentationHost(VStack { Spacer(); ComposerView(store: store) }, width: 400)
+        defer { hosted.window.close() }
+        try await settle { descendants(hosted.host, CompositionNSTextView.self).first?.string == store.draft }
+        let editor = try #require(descendants(hosted.host, CompositionNSTextView.self).first)
+        let scroll = try #require(editor.enclosingScrollView)
+        #expect(scroll.frame.height <= 64)
+        let shortHeight = scroll.frame.height
+        store.draft = String(repeating: "Another editable line\n", count: 20)
+        try await settle { editor.string == store.draft }
+        try await settle { scroll.frame.height > shortHeight }
+        #expect(scroll.frame.height <= ChatTheme.Dimensions.composerMaxHeight)
+        #expect(descendants(hosted.host, CompositionNSTextView.self).first === editor)
+    }
+
     @Test func actualMessageFramesTextStatusAndCodeStayInsideColumnsInEveryLocaleAndScheme() async throws {
         let store = ChatStore(backend: PresentationBackend())
         let observation = Task { await store.start() }
@@ -214,6 +244,7 @@ extension NativeUITests {
                     for control in controls {
                         try hosted.reveal(control)
                         try #require(hosted.screen.visibleFrame.contains(frame(control)), "Actual interactive edges must be on the connected screen")
+                        try #require(hosted.interactiveFrame.contains(frame(control)), "Interactive targets must also fit the CI display placement")
                     }
                     hosted.window.setFrameOrigin(renderOrigin)
                     try hosted.capture("message-composer-\(language.rawValue)-\(Int(width))-\(scheme)")
