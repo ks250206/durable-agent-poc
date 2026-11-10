@@ -7,6 +7,17 @@ import sys
 import xml.etree.ElementTree as ET
 
 
+def assert_success(root: ET.Element) -> None:
+    if root.tag != "testsuites":
+        raise ValueError("Missing xUnit testsuites report")
+    for node in root.iter():
+        if node.tag in {"failure", "error", "skipped"}:
+            raise ValueError(f"xUnit contains {node.tag}")
+        for attribute in ("failures", "errors", "skipped"):
+            if int(node.get(attribute, "0")):
+                raise ValueError(f"xUnit reports {attribute}")
+
+
 def validate(discovery: str, report: str) -> int:
     expected = set()
     for line in discovery.splitlines():
@@ -22,16 +33,9 @@ def validate(discovery: str, report: str) -> int:
         root = ET.fromstring(report)
     except ET.ParseError as error:
         raise ValueError(f"Incomplete or malformed xUnit report: {error}") from error
-    if root.tag != "testsuites":
-        raise ValueError("Missing xUnit testsuites report")
+    assert_success(root)
     completed = set()
     cases = root.findall(".//testcase")
-    for node in root.iter():
-        if node.tag in {"failure", "error", "skipped"}:
-            raise ValueError(f"xUnit contains {node.tag}")
-        for attribute in ("failures", "errors", "skipped"):
-            if int(node.get(attribute, "0")):
-                raise ValueError(f"xUnit reports {attribute}")
     for case in cases:
         # Swift Testing reports parameterized cases under their declared function name.
         name = f"{case.get('classname', '')}.{case.get('name', '')}".replace("/", ".")

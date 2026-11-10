@@ -26,6 +26,9 @@ Exit status alone is insufficient. After every invocation the validator requires
 an xUnit result for exactly the expected discovered IDs, with no missing or
 extra functions, skipped tests, failures or errors. A missing/malformed report
 also fails. Finally, the aggregate report must match the entire discovery list.
+SwiftPM can write Swift Testing results to a separate `-swift-testing.xml`
+path. Both it and the requested XCTest path are cleared before execution and
+all existing reports are validated and combined; neither framework is discarded.
 CI uploads the discovery list, per-invocation reports and aggregate report.
 Discovery/build is bounded to 300 seconds, each test invocation to 180 seconds;
 timeout or cancellation terminates that invocation's process group.

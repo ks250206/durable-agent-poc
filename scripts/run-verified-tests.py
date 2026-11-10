@@ -16,6 +16,37 @@ completion = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(completion)
 
 
+def report_paths(report: Path) -> tuple[Path, Path]:
+    return report, report.with_name(report.stem + "-swift-testing" + report.suffix)
+
+
+def clear_reports(report: Path) -> None:
+    for path in report_paths(report):
+        path.unlink(missing_ok=True)
+
+
+def read_reports(report: Path) -> str:
+    combined = ET.Element("testsuites")
+    found = False
+    for path in report_paths(report):
+        if path.exists():
+            root = ET.fromstring(path.read_text())
+            completion.assert_success(root)  # Preserve failures on either report's root.
+            combined.extend(root)
+            found = True
+    if not found:
+        raise FileNotFoundError(f"Neither XCTest nor Swift Testing report exists for {report}")
+    return ET.tostring(combined, encoding="unicode")
+
+
+def filter_pattern(group: list[str]) -> str:
+    # SwiftPM discovery and internal IDs have different separators/suffixes.
+    # Bound the method name so jump() cannot also select jumpToUser().
+    patterns = [".*".join(re.escape(part) for part in re.split(r"[./]", test.split("(", 1)[0]))
+                + r"(?:\(|$)" for test in group]
+    return "(?:" + "|".join(patterns) + ")"
+
+
 def execute(command: list[str], *, timeout: int, capture: bool = False) -> str:
     process = subprocess.Popen(command, stdout=subprocess.PIPE if capture else None,
                                text=True, start_new_session=True)
@@ -58,17 +89,13 @@ def main() -> int:
     combined = ET.Element("testsuites")
     for index, group in enumerate(groups):
         report = args.output / f"results-{index:03d}.xml"
-        report.unlink(missing_ok=True)
-        # SwiftPM discovery and Swift Testing's internal filter IDs use different
-        # separators/suffixes. Match qualified components, then require exact xUnit IDs.
-        patterns = [".*".join(re.escape(part) for part in re.split(r"[./]", test.split("(", 1)[0]))
-                    for test in group]
-        pattern = "(?:" + "|".join(patterns) + ")"
+        clear_reports(report)
         print(f"Verified test group {index + 1}/{len(groups)}: {group[0]} ({len(group)} functions)", flush=True)
-        execute(["swift", "test", "--skip-build", "--filter", pattern, "--xunit-output", str(report.resolve())],
+        execute(["swift", "test", "--skip-build", "--filter", filter_pattern(group), "--xunit-output", str(report.resolve())],
                 timeout=180)
-        completion.validate("\n".join(group), report.read_text())
-        combined.extend(ET.fromstring(report.read_text()))
+        result = read_reports(report)
+        completion.validate("\n".join(group), result)
+        combined.extend(ET.fromstring(result))
     aggregate = ET.tostring(combined, encoding="unicode")
     (args.output / "test-results.xml").write_text(aggregate)
     count = completion.validate(discovery, aggregate)
