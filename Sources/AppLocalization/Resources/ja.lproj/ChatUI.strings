@@ -103,3 +103,10 @@
 "{number} · {role} · {status}" = "{number}・{role}・{status}";
 "{role} message" = "{role}のメッセージ";
 "{title}. {detail}" = "{title}。{detail}";
+
+/* Issue #36: standalone user-input rail. */
+"User input navigation" = "ユーザー入力ナビゲーション";
+"User input {current} of {total}" = "ユーザー入力 {current} / {total}";
+"Each bar is a user input. The bright bar follows the transcript center. Hover previews the original input. Click, Up/Down, Home/End or Return jumps to an input. Tab leaves navigation." = "各横棒はユーザー入力です。明るい棒は会話の表示領域の中心に対応します。ホバーで元の入力を表示します。クリック、上下矢印、Home/End、Returnで入力へ移動します。Tabでナビゲーションを離れます。";
+"Showing inputs {first}–{last} of {total}. Scroll here or use Page Up/Down to browse every input." = "全{total}件の入力のうち{first}〜{last}件目を表示中。ここでスクロールするか、Page Up/Downですべての入力を参照できます。";
+"{count} user inputs. Transcript center unavailable." = "ユーザー入力{count}件。会話の表示領域の中心を取得できません。";
