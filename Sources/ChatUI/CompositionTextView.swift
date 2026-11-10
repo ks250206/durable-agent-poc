@@ -6,11 +6,32 @@ import SwiftUI
 @MainActor
 struct CompositionTextView: NSViewRepresentable {
     @ChatLocalization private var localization
+    @ChatAppearance private var appearance
     @Binding var text: String
     let input: ComposerInput
     let onSubmit: () -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView scroll: NSScrollView, context: Context) -> CGSize? {
+        guard let width = proposal.width, width > 0,
+              let editor = scroll.documentView as? CompositionNSTextView else { return nil }
+        // Measure a snapshot, never the live editor's text container: resizing must not
+        // disturb an input method's marked text, selection, layout or undo transaction.
+        let storage = NSTextStorage(attributedString: editor.attributedString())
+        let layout = NSLayoutManager()
+        let container = NSTextContainer(size: NSSize(
+            width: max(1, width - editor.textContainerInset.width * 2),
+            height: .greatestFiniteMagnitude))
+        container.lineFragmentPadding = editor.textContainer?.lineFragmentPadding ?? 5
+        storage.addLayoutManager(layout)
+        layout.addTextContainer(container)
+        layout.ensureLayout(for: container)
+        let textHeight = max(layout.usedRect(for: container).maxY, layout.extraLineFragmentRect.maxY)
+        let height = min(ChatTheme.Dimensions.composerMaxHeight,
+                         max(44, ceil(textHeight + editor.textContainerInset.height * 2)))
+        return CGSize(width: width, height: height)
+    }
 
     func makeNSView(context: Context) -> NSScrollView {
         let scroll = NSScrollView()
@@ -23,8 +44,8 @@ struct CompositionTextView: NSViewRepresentable {
         editor.allowsUndo = true
         editor.isAutomaticQuoteSubstitutionEnabled = false
         editor.isAutomaticDashSubstitutionEnabled = false
-        editor.font = .preferredFont(forTextStyle: .body)
-        editor.textContainerInset = NSSize(width: 8, height: 8)
+        editor.textContainerInset = NSSize(width: ChatTheme.Spacing.small, height: ChatTheme.Spacing.small)
+        applyAppearance(to: editor)
         editor.isVerticallyResizable = true
         editor.isHorizontallyResizable = false
         editor.autoresizingMask = [.width]
@@ -40,6 +61,7 @@ struct CompositionTextView: NSViewRepresentable {
             coordinator?.committedTextChanged($0)
         }
         editor.onCompositionChange = { [weak input] in input?.refreshCompositionState() }
+        editor.onFocusChange = { [weak input] in input?.isFocused = $0 }
         editor.onSubmit = { [weak coordinator = context.coordinator] in coordinator?.parent.onSubmit() }
         scroll.documentView = editor
         input.attach(editor)
@@ -51,7 +73,26 @@ struct CompositionTextView: NSViewRepresentable {
         guard let editor = scroll.documentView as? CompositionNSTextView else { return }
         editor.setAccessibilityLabel(localization.chat("Message"))
         editor.setAccessibilityHelp(localization.chat("Enter or Command+Enter sends committed text. Shift+Enter inserts a new line. Confirm IME composition before sending."))
+        applyAppearance(to: editor)
         editor.synchronize(draft: text)
+    }
+
+    /// Update the retained editor in place. These setters never replace its storage, delegate,
+    /// selection or undo manager, and do not synchronize an uncommitted IME buffer.
+    private func applyAppearance(to editor: CompositionNSTextView) {
+        let resolved = appearance
+        let palette = resolved.palette
+        editor.appearance = resolved.nsAppearance
+        if editor.font != ChatTheme.Typography.editor { editor.font = ChatTheme.Typography.editor }
+        if editor.textColor != palette.primaryText.nsColor { editor.textColor = palette.primaryText.nsColor }
+        editor.backgroundColor = palette.composer.nsColor
+        editor.insertionPointColor = palette.primaryText.nsColor
+        editor.selectedTextAttributes = [.backgroundColor: palette.active.nsColor,
+                                         .foregroundColor: palette.primaryText.nsColor]
+        var typing = editor.typingAttributes
+        typing[.font] = ChatTheme.Typography.editor
+        typing[.foregroundColor] = palette.primaryText.nsColor
+        editor.typingAttributes = typing
     }
 
     static func dismantleNSView(_ scroll: NSScrollView, coordinator: Coordinator) {
@@ -63,6 +104,7 @@ struct CompositionTextView: NSViewRepresentable {
         editor.onSubmit = nil
         editor.onCommittedChange = nil
         editor.onCompositionChange = nil
+        editor.onFocusChange = nil
     }
 
     @MainActor
@@ -96,6 +138,19 @@ class CompositionNSTextView: NSTextView {
     var onSubmit: (() -> Void)?
     var onCommittedChange: ((String) -> Void)?
     var onCompositionChange: (() -> Void)?
+    var onFocusChange: ((Bool) -> Void)?
+
+    override func becomeFirstResponder() -> Bool {
+        let accepted = super.becomeFirstResponder()
+        if accepted { onFocusChange?(true) }
+        return accepted
+    }
+
+    override func resignFirstResponder() -> Bool {
+        let accepted = super.resignFirstResponder()
+        if accepted { onFocusChange?(false) }
+        return accepted
+    }
 
     private var mutationDepth = 0
     private var keyBeganWithMarkedText = false

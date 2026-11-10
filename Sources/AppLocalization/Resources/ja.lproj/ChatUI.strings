@@ -103,6 +103,7 @@
 "{number} · {role} · {status}" = "{number}・{role}・{status}";
 "{role} message" = "{role}のメッセージ";
 "{title}. {detail}" = "{title}。{detail}";
+"↵ Send · ⇧↵ New line" = "↵ 送信 · ⇧↵ 改行";
 
 /* Issue #36: standalone user-input rail. */
 "User input navigation" = "ユーザー入力ナビゲーション";

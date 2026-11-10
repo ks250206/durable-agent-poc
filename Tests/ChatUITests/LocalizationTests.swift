@@ -118,6 +118,7 @@ private let chatUIKeys: Set<String> = [
     "{number} · {role} · {status}",
     "{role} message",
     "{title}. {detail}",
+    "↵ Send · ⇧↵ New line",
 ]
 
 @Test func allFourChatUITablesMatchAuditedKeysAndNamedFormats() throws {

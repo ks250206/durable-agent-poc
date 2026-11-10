@@ -103,6 +103,7 @@
 "{number} · {role} · {status}" = "{number} · {role} · {status}";
 "{role} message" = "{role} message";
 "{title}. {detail}" = "{title}. {detail}";
+"↵ Send · ⇧↵ New line" = "↵ Send · ⇧↵ New line";
 
 /* Issue #36: standalone user-input rail. */
 "User input navigation" = "User input navigation";
