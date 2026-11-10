@@ -3,12 +3,14 @@ import PackageDescription
 
 let package = Package(
     name: "DurableChat",
+    defaultLocalization: "en",
     platforms: [.macOS(.v14)],
     products: [
         .executable(name: "DurableChat", targets: ["DurableChatApp"]),
         .library(name: "ChatCore", targets: ["ChatCore"]),
         .library(name: "ChatUI", targets: ["ChatUI"]),
         .library(name: "AgentRuntime", targets: ["AgentRuntime"]),
+        .library(name: "AppLocalization", targets: ["AppLocalization"]),
     ],
     dependencies: [
         .package(
@@ -18,15 +20,17 @@ let package = Package(
     ],
     targets: [
         .target(name: "ChatCore"),
-        .target(name: "ChatUI", dependencies: ["ChatCore"]),
+        .target(name: "AppLocalization", resources: [.process("Resources")]),
+        .target(name: "ChatUI", dependencies: ["ChatCore", "AppLocalization"]),
         .target(name: "AgentRuntime", dependencies: [
-            "ChatCore", .product(name: "PiDurableKit", package: "PiDurableKit"),
+            "ChatCore", "AppLocalization", .product(name: "PiDurableKit", package: "PiDurableKit"),
         ]),
         .executableTarget(name: "DurableChatApp", dependencies: [
-            "ChatCore", "ChatUI", "AgentRuntime", .product(name: "PiDurableKit", package: "PiDurableKit"),
+            "ChatCore", "ChatUI", "AgentRuntime", "AppLocalization", .product(name: "PiDurableKit", package: "PiDurableKit"),
         ]),
         .testTarget(name: "AppIntegrationTests", dependencies: ["DurableChatApp", "ChatCore", "ChatUI", "AgentRuntime"]),
         .testTarget(name: "ChatCoreTests", dependencies: ["ChatCore"]),
+        .testTarget(name: "AppLocalizationTests", dependencies: ["AppLocalization"]),
         .testTarget(name: "ChatUITests", dependencies: ["ChatUI", "ChatCore"]),
         .testTarget(name: "AgentRuntimeTests", dependencies: ["AgentRuntime", "ChatCore"]),
     ],
