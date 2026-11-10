@@ -9,6 +9,7 @@ private typealias StoredState<Value> = SwiftUI.State<Value>
 @MainActor
 public struct ChatWorkspaceView<Composer: View, Minimap: View>: View {
     @ChatLocalization private var localization
+    @Environment(\.chatDiagnosticTemplates) private var diagnosticTemplates
     private let store: ChatStore
     private let navigation: TranscriptNavigation
     private let composer: Composer
@@ -87,7 +88,7 @@ public struct ChatWorkspaceView<Composer: View, Minimap: View>: View {
                     .accessibilityValue(store.modelSelection?.modelID ?? localization.chat("None"))
             }.frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
 
-            let connection = ConnectionPresentation(store.connection, localizer: localization)
+            let connection = ConnectionPresentation(store.connection, localizer: localization, diagnosticTemplates: diagnosticTemplates)
             Image(systemName: connection.symbol)
                 .foregroundStyle(store.connection.canSend ? Color.secondary : Color.primary)
                 .accessibilityLabel(connection.title).help(connection.title)
@@ -103,7 +104,7 @@ public struct ChatWorkspaceView<Composer: View, Minimap: View>: View {
 
     @ViewBuilder private var activityBar: some View {
         VStack(alignment: .leading, spacing: 8) {
-            let connection = ConnectionPresentation(store.connection, localizer: localization)
+            let connection = ConnectionPresentation(store.connection, localizer: localization, diagnosticTemplates: diagnosticTemplates)
             if let detail = connection.detail {
                 Label {
                     Text(verbatim: localization.chat("{title}. {detail}", [
@@ -114,14 +115,14 @@ public struct ChatWorkspaceView<Composer: View, Minimap: View>: View {
             }
             if let failure = store.visibleFailure {
                 HStack(alignment: .top) {
-                    Label(localization.diagnostic(failure.message), systemImage: "exclamationmark.triangle")
+                    Label(localization.diagnostic(failure.message, templates: diagnosticTemplates), systemImage: "exclamationmark.triangle")
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 4)
                     Button { store.clearFailure() } label: { Image(systemName: "xmark") }
                         .buttonStyle(.borderless).accessibilityLabel(localization.chat("Dismiss error"))
                 }.foregroundStyle(.red)
             } else if case .failed(let message) = store.selectedConversation?.activity {
-                Label(localization.diagnostic(message), systemImage: "exclamationmark.triangle").foregroundStyle(.red)
+                Label(localization.diagnostic(message, templates: diagnosticTemplates), systemImage: "exclamationmark.triangle").foregroundStyle(.red)
                     .fixedSize(horizontal: false, vertical: true)
             }
             if store.isSending {

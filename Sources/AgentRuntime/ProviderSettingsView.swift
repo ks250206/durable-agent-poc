@@ -1,3 +1,4 @@
+import AppLocalization
 import ChatCore
 import SwiftUI
 
@@ -8,6 +9,13 @@ private typealias PiStoredState<Value> = SwiftUI.State<Value>
 /// This view owns its authentication task and cancels it when dismissed.
 @MainActor
 public struct ProviderSettingsView: View {
+    @Environment(LocalizationSettings.self) private var settings: LocalizationSettings?
+    @Environment(\.locale) private var locale
+    private var localization: Localizer { settings?.localizer ?? Localizer(locale: locale) }
+    private func label(_ key: String, _ arguments: [String: LocalizationArgument] = [:]) -> String {
+        localization.string(key, table: .runtime, arguments: arguments)
+    }
+
     private let service: any ProviderSettingsService
     private let onSelection: @MainActor (ModelSelection?) -> Void
     @PiStoredState<[ProviderStatus]> private var statuses: [ProviderStatus] = []
@@ -29,93 +37,99 @@ public struct ProviderSettingsView: View {
 
     public var body: some View {
         Form {
-            Section("Provider") {
-                Picker("Account", selection: $account) {
-                    Text("Choose a provider").tag(Optional<ProviderAccount>.none)
+            Section(label("Provider")) {
+                Picker(label("Account"), selection: $account) {
+                    Text(label("Choose a provider")).tag(Optional<ProviderAccount>.none)
                     ForEach(statuses, id: \.configuration.account) { status in
-                        Text("\(status.configuration.account.option.displayName) · \(status.configuration.account.providerID)")
+                        Text(verbatim: "\((status.configuration.account.option == .apiKey ? label("API key") : status.configuration.account.option.displayName)) · \(status.configuration.account.providerID)")
                             .tag(Optional(status.configuration.account))
                     }
                 }
                 .disabled(working || signingIn != nil)
                 if let status = current {
-                    LabeledContent("Status", value: statusText(status))
+                    LabeledContent {
+                        Text(verbatim: statusText(status)).fixedSize(horizontal: false, vertical: true)
+                    } label: { Text(verbatim: label("Status")) }
                     if status.configuration.account.option == .apiKey {
-                        SecureField("API key", text: $apiKey)
+                        SecureField(label("API key"), text: $apiKey)
                             .disabled(working)
                             .onSubmit { saveKey() }
                         HStack {
-                            Button("Save API key") { saveKey() }
+                            Button(label("Save API key")) { saveKey() }
                                 .disabled(working || apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                            Button("Remove API key", role: .destructive) {
+                            Button(label("Remove API key"), role: .destructive) {
                                 operate { try await service.setAPIKey(nil, for: status.configuration.account) }
                             }.disabled(working)
                         }
-                        Text("The key is stored in Keychain. Its value is never loaded into this field.")
+                        Text(label("The key is stored in Keychain. Its value is never loaded into this field."))
                             .font(.caption).foregroundStyle(.secondary)
                     } else if status.configuration.account == CodexProviderSettingsService.account {
-                        TextField("Codex CLI absolute path (blank: discover)", text: $executablePath)
+                        TextField(label("Codex CLI absolute path (blank: discover)"), text: $executablePath)
                             .accessibilityIdentifier("settings.codex-path")
                             .disabled(working)
-                        Button("Save Codex CLI path") { saveExecutable(status) }
+                        Button(label("Save Codex CLI path")) { saveExecutable(status) }
                             .disabled(working).accessibilityIdentifier("settings.codex-save-path")
-                        Text("Install the official Codex CLI, or enter its absolute executable path. Only use a trusted executable.")
+                        Text(label("Install the official Codex CLI, or enter its absolute executable path. Only use a trusted executable."))
                             .font(.caption).foregroundStyle(.secondary)
-                        Text(CodexProviderSettingsService.loginInstructions)
+                        Text(verbatim: label(CodexProviderSettingsService.loginInstructions))
                             .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
-                        Text("This reuses your existing Codex CLI ChatGPT login, separately from Pi ChatGPT OAuth and Cursor. API-key CLI authentication is unsupported. Credentials remain owned by the official CLI.")
+                        Text(label("This reuses your existing Codex CLI ChatGPT login, separately from Pi ChatGPT OAuth and Cursor. API-key CLI authentication is unsupported. Credentials remain owned by the official CLI."))
                             .font(.caption).foregroundStyle(.secondary)
-                        Text("Usage limits and remaining quota are unknown here; login detection does not guarantee model access or availability.")
+                        Text(label("Usage limits and remaining quota are unknown here; login detection does not guarantee model access or availability."))
                             .font(.caption).foregroundStyle(.secondary)
-                        Button("Refresh existing CLI login and models") { operate {} }
+                        Button(label("Refresh existing CLI login and models")) { operate {} }
                             .disabled(working).accessibilityIdentifier("settings.codex-refresh")
                     } else if status.configuration.account.option == .cursor {
-                        TextField("Cursor CLI absolute path (blank: discover)", text: $executablePath)
+                        TextField(label("Cursor CLI absolute path (blank: discover)"), text: $executablePath)
                             .disabled(working || signingIn != nil)
-                        Button("Save CLI path") {
+                        Button(label("Save CLI path")) {
                             saveExecutable(status)
                         }.disabled(working || signingIn != nil)
-                        Text(CursorProviderSettingsService.loginInstructions)
+                        Text(verbatim: label(CursorProviderSettingsService.loginInstructions))
                             .font(.caption).foregroundStyle(.secondary)
-                        Text("Credentials remain in Cursor's official CLI store. Only use a trusted executable.")
+                        Text(label("Credentials remain in Cursor's official CLI store. Only use a trusted executable."))
                             .font(.caption).foregroundStyle(.secondary)
                         authenticationControls(status.configuration.account, title: "Sign in with Cursor")
                     } else if status.configuration.account.option == .chatGPT {
-                        Text("ChatGPT subscription sign-in requires your interaction in the secure authentication session. It is separate from an OpenAI API key.")
+                        Text(label("ChatGPT subscription sign-in requires your interaction in the secure authentication session. It is separate from an OpenAI API key."))
                             .font(.caption).foregroundStyle(.secondary)
                         authenticationControls(status.configuration.account, title: "Sign in with ChatGPT")
                     }
-                    Picker("Model", selection: Binding(
+                    Picker(label("Model"), selection: Binding(
                         get: { current?.configuration.selectedModelID },
                         set: { model in chooseModel(model) }
                     )) {
-                        Text("Choose a model").tag(Optional<String>.none)
+                        Text(label("Choose a model")).tag(Optional<String>.none)
                         if let selected = status.configuration.selectedModelID,
                            !status.models.contains(where: { $0.id.modelID == selected }) {
-                            Text("Unavailable: \(selected)").tag(Optional(selected))
+                            Text(verbatim: label("Unavailable: {model}", ["model": .string(selected)])).tag(Optional(selected))
                         }
                         ForEach(status.models) { model in
-                            Text(model.displayName).tag(Optional(model.id.modelID))
+                            Text(verbatim: model.displayName).tag(Optional(model.id.modelID))
                         }
                     }.disabled(working || signingIn != nil)
-                    Button("Use selected model") {
+                    Button(label("Use selected model")) {
                         publishSelection()
                     }.disabled(working || signingIn != nil || status.authentication != .configured
                                || !status.models.contains(where: { $0.id.modelID == status.configuration.selectedModelID }))
                     if status.models.isEmpty {
-                        Text("This provider has no available models.").foregroundStyle(.secondary)
+                        Text(label("This provider has no available models.")).foregroundStyle(.secondary)
                     }
                 }
             }
             if let failure {
-                Section { Text(failure).foregroundStyle(.red).accessibilityLabel("Settings error: \(failure)") }
+                Section {
+                    let message = RuntimePresentation.diagnostic(failure, localizer: localization)
+                    Text(verbatim: message).foregroundStyle(.red)
+                        .accessibilityLabel(label("Settings error: {message}", ["message": .string(message)]))
+                }
             }
-            Button("Disable sending (clear active model)") { onSelection(nil) }
+            Button(label("Disable sending (clear active model)")) { onSelection(nil) }
                 .disabled(working || signingIn != nil)
-            Button("Refresh provider state") { operate {} }.disabled(working || signingIn != nil)
+            Button(label("Refresh provider state")) { operate {} }.disabled(working || signingIn != nil)
         }
         .formStyle(.grouped)
-        .frame(minWidth: 500, minHeight: 360)
+        .frame(minWidth: 360, minHeight: 360)
         .task { await refresh() }
         .onChange(of: account) { _, _ in
             apiKey = ""
@@ -133,10 +147,10 @@ public struct ProviderSettingsView: View {
         HStack {
             if signingIn != nil {
                 ProgressView().controlSize(.small)
-                Button("Cancel sign-in") { cancelSignIn() }
+                Button(label("Cancel sign-in")) { cancelSignIn() }
             } else {
-                Button(title) { signIn(account) }
-                Button("Sign out") { operate { try await service.logout(from: account) } }
+                Button(label(title)) { signIn(account) }
+                Button(label("Sign out")) { operate { try await service.logout(from: account) } }
             }
         }.disabled(working)
     }
@@ -145,15 +159,15 @@ public struct ProviderSettingsView: View {
     private func statusText(_ status: ProviderStatus) -> String {
         let state = status.authentication
         if status.configuration.account == CodexProviderSettingsService.account, state == .configured {
-            return "Existing CLI ChatGPT login detected"
+            return label("Existing CLI ChatGPT login detected")
         }
-        if signingIn == account { return "Signing in…" }
+        if signingIn == account { return label("Signing in…") }
         switch state {
-        case .unconfigured: return "Not configured"
-        case .signedOut: return "Signed out"
-        case .signingIn: return "Signing in…"
-        case .configured: return "Configured"
-        case .unavailable(let message), .failed(let message): return message
+        case .unconfigured: return label("Not configured")
+        case .signedOut: return label("Signed out")
+        case .signingIn: return label("Signing in…")
+        case .configured: return label("Configured")
+        case .unavailable(let message), .failed(let message): return RuntimePresentation.diagnostic(message, localizer: localization)
         }
     }
     private func publishSelection() {

@@ -161,3 +161,57 @@ choose SIMULATED Codex CLI (no AI), click Use selected model, create a conversat
 Refresh, close/reopen Settings, and switch away/back to its history to verify the explicit choice.
 Codex login/logout is instructions-only, and fixture mode rejects clearing/changing its executable to
 another CLI. Do not enter a real API key or attempt real account sign-in for this QA.
+
+## Issue #23 language integration
+
+AppSession now owns one injectable LocalizationSettings, shared by the scenes, workspace, settings
+and commands. NativeSettingsView places the existing System/日本語/English/简体中文/한국어 picker and
+Reset to System above provider settings, including opening/failure/demo states. Overrides apply
+immediately and persist through the foundation's key; activation/locale notifications refresh only
+System. Demo/test-runtime language defaults are isolated suites cleaned at shutdown, so QA never
+reads or changes personal language preferences. Provider/account IDs, explicit model-application
+callbacks, runtime startup/cleanup, origin Stop and Codex locks are unchanged.
+
+Runtime/App resources translate settings/auth help/status/errors, app badges/startup errors and
+app-owned Settings/Quit commands in four languages. Canonical source strings remain English in
+runtime/store state; already open errors/notices resolve again on language change. Only exact
+app-owned keys and the two RuntimePresentation templates are eligible. External text and all
+conversation/model/path data stay verbatim. See Localization.md for the adapter and #24 handoff.
+
+Verification uses the existing serialized NativeAppTests parent and the original separately
+serialized ChatUI native suites. It includes four-language settings/provider screens at 400/1200,
+light/dark; every authentication-state branch; existing open startup/settings/status failures and
+routing notices; unchanged external status text; injected persistence/reopen/fallback/System reset
+and lifecycle refresh; and actual isolated Codex streaming plus native marked-text, selection,
+focus, draft, store/navigation/model/conversation identity and original busy-error preservation.
+The #21 early-exit/startup-failure/shutdown/process/lock and Pi/Cursor regressions still run.
+Native hosting is synthetic AppKit evidence, distinct from physical IME interaction or real accounts.
+No production credentials, installed CLI account, network or real model request is used.
+
+Local command logs and native PNGs are under ignored `dist/qa/issue-23/`. The release package keeps
+all four tables for all four locales in DurableChat_AppLocalization.bundle, using the unchanged
+packaging script. #24 retains repository-wide validator/CI and final aggregate QA ownership; the
+parent retains Cursor Agent Grok 4.7 High review, remote checks and merge. No delegate/review/watch
+is started by this implementation.
+
+Local #23 validation (2026-11-10): **136 tests passed** (ChatUI 42, ChatCore 14,
+AppLocalization 11, app integration 14, AgentRuntime 55) with the prescribed CLT command.
+`scripts/build-app.sh` produced the release app; an independent Foundation probe resolved
+108 Runtime and 13 App entries in every packaged locale and confirmed Common/ChatUI were
+present with development localization en. Deep/strict codesign verification passed before
+and after GUI QA. Existing CLT missing Developer library/framework linker warnings and the
+existing native AX compatibility API deprecation remain nonfatal.
+
+CUA ran only the packaged `--test-runtime` app. After an initial inventory timeout, direct
+app attachment succeeded. It observed the existing mock Codex login, user-run login/logout
+instructions, Pi OAuth/Cursor distinction and unknown-limit help; selected Japanese,
+Simplified Chinese and Korean and saw settings update immediately; closed Settings and
+observed the Korean workspace with the same faux-1 model; reopened Settings with Korean
+retained; and used Reset to System to restore deterministic English. It typed/sent a local
+Pi message and observed simulated streaming. Attempts to select the Codex model and to
+change language during streaming were rejected repeatedly by CUA's
+“The user changed ... Re-query the latest state ...” guard, so these interactions are
+**not** claimed as GUI passes. Streaming-language/IME identity proof is the passing native
+host test with the real local Codex executable fixture. Physical IME/candidate windows,
+real-account access and dynamic app-menu GUI verification remain unverified. Command-Q
+returned `App quit`; its exact temporary root was removed, confirming normal cleanup.

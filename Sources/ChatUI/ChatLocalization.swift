@@ -2,8 +2,8 @@ import AppLocalization
 import ChatCore
 import SwiftUI
 
-/// Optional until the app installs its shared settings (#23). Reading inside body tracks
-/// Observation; explicit locale injection also works without a settings owner.
+/// The app injects its shared settings owner. Reading inside body tracks Observation;
+/// standalone consumers may inject an explicit locale without a settings owner.
 @propertyWrapper @MainActor
 struct ChatLocalization: DynamicProperty {
     @Environment(LocalizationSettings.self) private var settings: LocalizationSettings?
@@ -38,5 +38,17 @@ extension Localizer {
         case .stopped: chat("Stopped")
         case .failed: chat("Failed")
         }
+    }
+}
+
+private struct ChatDiagnosticTemplatesKey: EnvironmentKey {
+    static let defaultValue: [DiagnosticTemplate] = []
+}
+
+extension EnvironmentValues {
+    /// App-owned canonical diagnostic adapters, provided by the composing runtime. No transcript use.
+    public var chatDiagnosticTemplates: [DiagnosticTemplate] {
+        get { self[ChatDiagnosticTemplatesKey.self] }
+        set { self[ChatDiagnosticTemplatesKey.self] = newValue }
     }
 }

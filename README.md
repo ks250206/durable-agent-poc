@@ -130,3 +130,12 @@ PiDurableKit remains pinned in the manifest and lockfile at `4e1120bbdc7c5329a2f
 Component contracts: [shared API](docs/SharedContracts.md), [Pi runtime](docs/PiRuntime.md),
 [Cursor runtime](docs/CursorRuntime.md), [Codex runtime](docs/CodexRuntime.md). Issues #9 and #21 supply
 application composition and routing. Localization work remains separate in #22/#23.
+
+### App language
+
+Open Settings to choose System, 日本語, English, 简体中文 or 한국어. The language changes immediately
+and the override survives reopening; Reset to System removes the override. Workspace, settings,
+app-owned menus and existing diagnostics update together while the editor and active response stay
+in place. Conversation text, titles, model names and external errors remain verbatim. Demo and
+`--test-runtime` use disposable language preferences; production preferences are not used for QA.
+See [localization contracts and ownership](docs/Localization.md) for details.

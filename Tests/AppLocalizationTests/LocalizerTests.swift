@@ -39,10 +39,9 @@ struct TestCatalog {
     #expect(Set(Localizer.resources.localizations.map { $0.lowercased() }).isSuperset(of: ["en", "ja", "zh-hans", "ko"]))
     #expect(LocalizationValidation.issues().isEmpty)
     #expect(LocalizationValidation.keys(table: .common).contains("Reset to System"))
-    // Follow-up tables must not masquerade as complete with English placeholder translations.
     for table in [LocalizationTable.runtime, .app] {
-        #expect(LocalizationValidation.keys(table: table).isEmpty)
-        #expect(LocalizationValidation.issues(tables: [table]).count == 4)
+        #expect(!LocalizationValidation.keys(table: table).isEmpty)
+        #expect(LocalizationValidation.issues(tables: [table]).isEmpty)
     }
     let regional = Localizer(locale: Locale(identifier: "en_GB"))
     #expect(regional.language == .english)

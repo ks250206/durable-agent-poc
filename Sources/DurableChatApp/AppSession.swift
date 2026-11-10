@@ -1,4 +1,5 @@
 import AgentRuntime
+import AppLocalization
 import ChatCore
 import ChatUI
 import Foundation
@@ -8,6 +9,7 @@ import PiDurableKit
 @MainActor @Observable
 final class AppSession {
     enum Mode { case live, demo, testRuntime }
+    let localization: LocalizationSettings
     let mode: Mode
     private(set) var store: ChatStore?
     let navigation = TranscriptNavigation()
@@ -22,10 +24,26 @@ final class AppSession {
     private var settingsRevision = 0
     private let isolatedDirectory: URL?
 
-    init(arguments: [String] = ProcessInfo.processInfo.arguments, isolatedDirectory: URL? = nil) {
+    init(arguments: [String] = ProcessInfo.processInfo.arguments, isolatedDirectory: URL? = nil,
+         localization: LocalizationSettings? = nil) {
         self.isolatedDirectory = isolatedDirectory
         mode = arguments.contains("--demo") ? .demo : (arguments.contains("--test-runtime") ? .testRuntime : .live)
+        // Demo/test-runtime never read or write personal language preferences. A suite lives only
+        // for this session; tests may inject their own isolated owner to exercise reopen persistence.
+        if let localization { self.localization = localization }
+        else if mode == .live { self.localization = LocalizationSettings() }
+        else {
+            let name = "DurableChat.Isolated.Language.\(UUID())"
+            let defaults = UserDefaults(suiteName: name)!
+            isolatedDefaultsName = name
+            self.localization = LocalizationSettings(defaults: defaults, preferredLanguages: { ["en"] })
+        }
     }
+
+    @ObservationIgnored private var isolatedDefaultsName: String?
+
+    /// Lifecycle refresh changes only System; an explicit override stays explicit.
+    func refreshSystemLanguage() { localization.refreshSystemLanguage() }
 
     /// The single app owner starts observation; child views never create runtimes/subscriptions.
     func start() async {
@@ -156,6 +174,7 @@ final class AppSession {
         router = nil; settings = nil
         // Router.shutdown releases its backend owners even though the store can still render history.
         if let testDirectory { try? FileManager.default.removeItem(at: testDirectory) }
+        if let isolatedDefaultsName { UserDefaults(suiteName: isolatedDefaultsName)?.removePersistentDomain(forName: isolatedDefaultsName) }
     }
 }
 
