@@ -158,19 +158,24 @@ private actor RailTestBackend: ChatBackend {
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     try #require(bitmap.representation(using: .png, properties: [:])).write(to: directory.appendingPathComponent(name + ".png"))
 }
-@MainActor private func railWindow(_ view: NSView, width: CGFloat = 40, height: CGFloat = 400) -> NSWindow {
+/// Only the offscreen render fixture may extend beyond the display; keep its rail reachable.
+@MainActor private final class RailRenderWindow: NSWindow {
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect { frameRect }
+}
+
+@MainActor private func railWindow(_ view: NSView, width: CGFloat = 40, height: CGFloat = 400,
+                                  placementFrame: CGRect? = nil) throws -> NSWindow {
     _ = NSApplication.shared
-    let window = NSWindow(contentRect: CGRect(x: 200, y: 200, width: width, height: height),
-                          styleMask: [.titled], backing: .buffered, defer: false)
+    let screen = try #require(NSScreen.main)
+    let visible = placementFrame ?? screen.visibleFrame
+    let window = RailRenderWindow(contentRect: CGRect(x: 200, y: 200, width: width, height: height),
+                                  styleMask: [.titled], backing: .buffered, defer: false)
     window.isReleasedWhenClosed = false
     window.contentView = view
-    if let screen = NSScreen.main {
-        let visible = screen.visibleFrame
-        // CI may have a 1024 pt display while the offscreen render host is 1200 pt.
-        // Keep the trailing interactive strip reachable instead of synthesizing hover offscreen.
-        window.setFrameOrigin(CGPoint(x: min(200, visible.maxX - window.frame.width - 12),
-                                      y: max(visible.minY + 12, min(200, visible.maxY - window.frame.height - 12))))
-    }
+    // AppKit normally constrains an oversized titled window's x back to zero, hiding the rail.
+    // The fixture subclass permits left-side clipping while the trailing interaction stays visible.
+    window.setFrameOrigin(CGPoint(x: min(visible.minX + 200, visible.maxX - window.frame.width - 12),
+                                  y: max(visible.minY + 12, min(visible.minY + 200, visible.maxY - window.frame.height - 12))))
     window.makeKeyAndOrderFront(nil)
     view.layoutSubtreeIfNeeded()
     return window
@@ -184,7 +189,7 @@ extension NativeUITests {
         let model = PromptRailModel(messages: messages)
         let navigation = TranscriptNavigation()
         let input = PromptRailInputView(frame: CGRect(x: 0, y: 0, width: 40, height: 400))
-        let window = railWindow(input)
+        let window = try railWindow(input)
         defer { window.close() }
         let viewport = TranscriptViewport(centerVisibleMessageID: messages[1].id)
         navigation.viewport = viewport
@@ -216,7 +221,8 @@ extension NativeUITests {
         let previewScroll = try #require(text.enclosingScrollView)
         #expect(text.frame.height > previewScroll.contentView.bounds.height)
         #expect(popup.frame.width < 400 && popup.frame.height < 320)
-        if let screen = popup.screen { #expect(screen.visibleFrame.insetBy(dx: -2, dy: -2).contains(popup.frame)) }
+        let popupScreen = try #require(popup.screen)
+        #expect(popupScreen.visibleFrame.insetBy(dx: -2, dy: -2).contains(popup.frame))
         try railCapture(popupContent, "prompt-rail-long-popover")
         for _ in 0..<20 {
             input.mouseMoved(with: try railMouse(.mouseMoved, point, input))
@@ -275,7 +281,11 @@ extension NativeUITests {
                     }.background(ChatTheme.background).environment(\.locale, language.locale)
                         .environment(\.colorScheme, dark ? .dark : .light))
                     host.sizingOptions = []
-                    let window = railWindow(host, width: width, height: 500)
+                    let screen = try #require(NSScreen.main)
+                    var placement = screen.visibleFrame
+                    // Reproduce CI's 1024 pt horizontal placement even on a larger local display.
+                    placement.size.width = min(1024, placement.width)
+                    let window = try railWindow(host, width: width, height: 500, placementFrame: placement)
                     window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
                     defer { window.close() }
                     try await railSettle { railFind(host, PromptRailInputView.self).first?.currentID != nil }
@@ -288,11 +298,14 @@ extension NativeUITests {
                         let cell = input.geometry.cell(for: index)
                         let hoverPoint = CGPoint(x: 3, y: cell.midY)
                         let screenPoint = window.convertPoint(toScreen: input.convert(hoverPoint, to: nil))
-                        if let screen = window.screen { try #require(screen.visibleFrame.contains(screenPoint)) }
+                        let anchorScreen = try #require(window.screen)
+                        try #require(anchorScreen.visibleFrame.contains(screenPoint))
+                        try #require(placement.contains(screenPoint))
                         input.mouseEntered(with: try railMouse(.mouseEntered, hoverPoint, input))
                         #expect(input.previewText == store.messages[index * 2].content)
                         let popup = try #require(NSApplication.shared.windows.first { $0.isVisible && $0 !== window && railFind($0.contentView ?? NSView(), NSTextView.self).contains { $0.string == store.messages[index * 2].content } })
-                        if let screen = popup.screen { #expect(screen.visibleFrame.insetBy(dx: -2, dy: -2).contains(popup.frame)) }
+                        let popupScreen = try #require(popup.screen)
+                        #expect(popupScreen.visibleFrame.insetBy(dx: -2, dy: -2).contains(popup.frame))
                         let content = try #require(popup.contentView)
                         let text = try #require(railFind(content, NSTextView.self).first)
                         #expect(text.accessibilityLabel() == Localizer(language: language).chat("User input {current} of {total}", ["current": .integer(index + 1), "total": .integer(3)]))
@@ -319,7 +332,7 @@ extension NativeUITests {
         let host = NSHostingView(rootView: PromptRail(store: store, navigation: navigation)
             .background(ChatTheme.background).environment(settings))
         host.sizingOptions = []
-        let window = railWindow(host)
+        let window = try railWindow(host)
         defer { window.close() }
         try await railSettle { railFind(host, PromptRailInputView.self).first?.model.inputs.count == 3 }
         let input = try #require(railFind(host, PromptRailInputView.self).first)
@@ -371,7 +384,7 @@ extension NativeUITests {
             PromptRail(store: store, navigation: navigation)
         }.background(ChatTheme.background).environment(\.locale, Locale(identifier: "en")))
         host.sizingOptions = []
-        let window = railWindow(host, width: 400, height: 420)
+        let window = try railWindow(host, width: 400, height: 420)
         defer { window.close() }
         try await railSettle { navigation.viewport.lastVisibleMessageID == messages.last?.id }
         let input = try #require(railFind(host, PromptRailInputView.self).first)
@@ -415,7 +428,7 @@ extension NativeUITests {
             PromptRail(store: store, navigation: navigation)
         }.environment(\.locale, Locale(identifier: "en")))
         host.sizingOptions = []
-        let window = railWindow(host, width: 760, height: 720)
+        let window = try railWindow(host, width: 760, height: 720)
         defer { window.close() }
         try await railSettle { navigation.viewport.lastVisibleMessageID == messages.last?.id }
         let input = try #require(railFind(host, PromptRailInputView.self).first)
@@ -446,7 +459,7 @@ extension NativeUITests {
     @Test func reduceMotionAndIncreasedContrastKeepReadableNativeBarsAndStableCells() throws {
         let messages = railMessages(3)
         let input = PromptRailInputView(frame: CGRect(x: 0, y: 0, width: 40, height: 400))
-        let window = railWindow(input)
+        let window = try railWindow(input)
         defer { window.close() }
         let navigation = TranscriptNavigation()
         let viewport = TranscriptViewport(centerVisibleMessageID: messages[1].id)
