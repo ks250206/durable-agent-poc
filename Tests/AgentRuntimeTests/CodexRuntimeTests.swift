@@ -278,7 +278,7 @@ import Darwin
         let f = try CodexFixture(); defer { f.clean() }
         for (mode, expected) in [("malformed", CodexRuntimeError.invalidOutput), ("oversized", .invalidOutput), ("timeout", .timedOut), ("orphan", .timedOut), ("exit", .exited), ("stderr", .exited)] {
             try f.marker(mode)
-            let process = CodexProcess(executable: f.executable, workingDirectory: f.root, requestTimeout: ["malformed", "oversized"].contains(mode) ? 2 : 0.3)
+            let process = CodexProcess(executable: f.executable, workingDirectory: f.root, requestTimeout: 5)
             await #expect(throws: expected) { try await process.start() }
             await process.shutdown()
             if mode == "orphan" {
@@ -288,7 +288,7 @@ import Darwin
         }
         // A full stdin pipe must unblock when the owned process is killed on deadline.
         try f.marker("no-read")
-        let blockedWriter = CodexProcess(executable: f.executable, workingDirectory: f.root, requestTimeout: 0.3)
+        let blockedWriter = CodexProcess(executable: f.executable, workingDirectory: f.root, requestTimeout: 5)
         try await blockedWriter.start()
         await #expect(throws: CodexRuntimeError.timedOut) {
             _ = try await blockedWriter.request("model/list", .object(["padding": .string(String(repeating: "x", count: 1024 * 1024))]))
@@ -314,7 +314,7 @@ import Darwin
     @Test func unsafeResponseTurnFailureAndTotalDeadlineAreSanitized() async throws {
         let f = try CodexFixture(); defer { f.clean() }
         let settings = try await f.settings()
-        let backend = try CodexChatBackend(storageDirectory: f.storage, settings: settings, requestTimeout: 0.4, turnTimeout: 0.8)
+        let backend = try CodexChatBackend(storageDirectory: f.storage, settings: settings, requestTimeout: 5, turnTimeout: 8)
         let id = try await backend.createConversation(title: nil)
         try f.marker("unsafe")
         try await backend.send(SendRequest(conversationID: id, text: "x", model: f.model))

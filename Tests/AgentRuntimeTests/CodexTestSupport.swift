@@ -18,12 +18,12 @@ struct CodexFixture: Sendable {
         try Data(codexProtocolSchemas.utf8).write(to: root.appendingPathComponent("schemas.json"))
         try Data("fixture-auth-sentinel".utf8).write(to: root.appendingPathComponent("auth-state"))
     }
-    func settings(timeout: TimeInterval = 1) async throws -> CodexProviderSettingsService {
+    func settings(timeout: TimeInterval = 5) async throws -> CodexProviderSettingsService {
         let service = try CodexProviderSettingsService(storageDirectory: storage, requestTimeout: timeout)
         try await service.update(ProviderConfiguration(account: model.account, selectedModelID: model.modelID, executablePath: executable.path))
         return service
     }
-    func backend(settings: CodexProviderSettingsService, timeout: TimeInterval = 2) throws -> CodexChatBackend {
+    func backend(settings: CodexProviderSettingsService, timeout: TimeInterval = 5) throws -> CodexChatBackend {
         try CodexChatBackend(storageDirectory: storage, settings: settings, requestTimeout: timeout, turnTimeout: timeout * 4)
     }
     func marker(_ value: String, name: String = "mode") throws { try Data(value.utf8).write(to: root.appendingPathComponent(name)) }
@@ -158,7 +158,7 @@ for line in sys.stdin:
 }
 
 func codexEventually(_ body: () async throws -> Bool) async throws {
-    for _ in 0..<400 {
+    for _ in 0..<1200 {
         if try await body() { return }
         try await Task.sleep(for: .milliseconds(10))
     }

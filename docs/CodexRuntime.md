@@ -144,6 +144,10 @@ or production credential access is used for tests. Live CLI account entitlement,
 and #21 native UI/router integration are not certified by executable fixtures. Existing Pi/Cursor
 contracts and routes remain independently exercised by their existing test suites.
 
+CI harness note: native AppKit host suites share a serialized parent because focus/key-window state
+is process-global. Their bounded waits service the event loop. Fixture RPC budgets are 5 seconds
+(production defaults remain 20); explicit hung-process/blocked-stdin/turn-deadline assertions remain.
+
 Local CLT verification: all **100 tests passed** (ChatUI 34, ChatCore 14, app integration 4,
 runtime 48 including 12 Codex executable-fixture tests). Existing CLT linker search-path warnings
 are nonfatal. CI and independent Cursor Agent review are separate parent-owned gates.
