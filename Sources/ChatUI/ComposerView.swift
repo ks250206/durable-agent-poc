@@ -14,39 +14,66 @@ private typealias ComposerState<Value> = SwiftUI.State<Value>
 @MainActor
 public struct ComposerView: View {
     @ChatLocalization private var localization
+    @ChatAppearance private var appearance
     @Bindable private var store: ChatStore
     @ComposerState<ComposerInput> private var input = ComposerInput()
 
     public init(store: ChatStore) { self.store = store }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let palette = appearance.palette
+        VStack(alignment: .leading, spacing: ChatTheme.Spacing.small) {
             CompositionTextView(text: $store.draft, input: input) { input.submit(store: store) }
-                .frame(minHeight: 80, idealHeight: 112, maxHeight: 160)
-                .background(.background)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(.quaternary))
-            HStack {
-                Text(localization.chat("Enter / ⌘Enter to send · Shift+Enter for a new line\nConfirm IME composition before sending."))
-                    .font(.caption)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(alignment: .center, spacing: ChatTheme.Spacing.small) {
+                Text(localization.chat("↵ Send · ⇧↵ New line"))
+                    .font(ChatTheme.Typography.caption)
+                    .foregroundStyle(palette.secondaryText.color)
                     .fixedSize(horizontal: false, vertical: true)
-                    .foregroundStyle(.secondary)
-                Spacer()
+                    .help(localization.chat("Enter / ⌘Enter to send · Shift+Enter for a new line\nConfirm IME composition before sending."))
+                Spacer(minLength: 0)
                 if store.isSending {
-                    Button(localization.chat("Stop"), systemImage: "stop.fill") { input.stop(store: store) }
-                        .disabled(input.isStopping).fixedSize()
+                    actionButton(label: localization.chat("Stop"), symbol: "stop.fill") { input.stop(store: store) }
+                        .disabled(input.isStopping)
+                } else {
+                    actionButton(label: localization.chat("Send"), symbol: "arrow.up") { input.submit(store: store) }
+                        .disabled(!input.canSubmit(store: store))
                 }
-                Button(localization.chat("Send"), systemImage: "arrow.up") { input.submit(store: store) }
-                    .disabled(!input.canSubmit(store: store)).fixedSize()
             }
+            .padding(.leading, ChatTheme.Spacing.small)
         }
-        .padding(12)
+        .padding(ChatTheme.Spacing.medium)
+        .background {
+            RoundedRectangle(cornerRadius: ChatTheme.Radii.composer)
+                .fill(palette.composer.color)
+                .shadow(color: palette.shadow.color, radius: ChatTheme.Shadows.composerRadius,
+                        y: ChatTheme.Shadows.composerY)
+        }
+        .overlay(RoundedRectangle(cornerRadius: ChatTheme.Radii.composer)
+            .strokeBorder(input.isFocused ? palette.focus.color : palette.stroke.color.opacity(0.45),
+                          lineWidth: input.isFocused ? appearance.focusWidth : appearance.strokeWidth))
+        .padding(ChatTheme.Spacing.medium)
+    }
+
+    private func actionButton(label: String, symbol: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 15, weight: .semibold))
+                .frame(width: ChatTheme.Dimensions.controlHeight, height: ChatTheme.Dimensions.controlHeight)
+                .foregroundStyle(appearance.palette.textOnAccent.color)
+                .background(appearance.palette.accent.color, in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .help(label)
     }
 }
 
 /// Button and keyboard use the same synchronous gate, and revalidate after the Task hop.
 @MainActor @Observable
 final class ComposerInput {
+    var isFocused = false
     private(set) var isCompositionBlocking = false
     private(set) var isSubmitting = false
     private(set) var isStopping = false
@@ -60,6 +87,7 @@ final class ComposerInput {
     func detach(_ editor: CompositionNSTextView) {
         if self.editor === editor {
             self.editor = nil
+            isFocused = false
             isCompositionBlocking = false
         }
     }

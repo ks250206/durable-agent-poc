@@ -658,7 +658,7 @@ extension NativeAppTests {
                         #expect(workspace.window.appearance == nil && settings.window.appearance == nil)
                     }
                     let editor = try #require(workspace.descendants(CompositionNSTextView.self).first)
-                    #expect(editor.appearance == nil) // Actual production editor inherits; palette adoption belongs to #35.
+                    #expect(editor.appearance?.name == expected) // #35 applies the same resolved palette to the retained editor.
                     #expect(editor.effectiveAppearance.name == expected)
                     #expect(workspace.host.effectiveAppearance.name == expected && settings.host.effectiveAppearance.name == expected)
                     #expect(NSApplication.shared.appearance?.name == appOverride)

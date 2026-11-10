@@ -103,6 +103,7 @@
 "{number} · {role} · {status}" = "{number} · {role} · {status}";
 "{role} message" = "{role}消息";
 "{title}. {detail}" = "{title}。{detail}";
+"↵ Send · ⇧↵ New line" = "↵ 发送 · ⇧↵ 换行";
 
 /* Issue #36: standalone user-input rail. */
 "User input navigation" = "用户输入导航";
