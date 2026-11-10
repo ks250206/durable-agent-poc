@@ -117,7 +117,8 @@
       "{number} · {role} · {bytes} bytes · {status}",
       "{number} · {role} · {status}",
       "{role} message",
-      "{title}. {detail}"
+      "{title}. {detail}",
+      "↵ Send · ⇧↵ New line"
     ],
     "Runtime": [
       "API key",
@@ -4930,7 +4931,31 @@
         "reason": "R7"
       },
       {
-        "prefix": "Button(localization.chat(",
+        "prefix": ".help(localization.chat(",
+        "literal": "\"Enter / ⌘Enter to send · Shift+Enter for a new line\\nConfirm IME composition before sending.\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "Enter / ⌘Enter to send · Shift+Enter for a new line\nConfirm IME composition before sending."
+          ]
+        }
+      },
+      {
+        "prefix": "Text(localization.chat(",
+        "literal": "\"↵ Send · ⇧↵ New line\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "↵ Send · ⇧↵ New line"
+          ]
+        }
+      },
+      {
+        "prefix": "actionButton(label: localization.chat(",
         "literal": "\"Send\"",
         "count": 1,
         "kind": "localized",
@@ -4942,7 +4967,7 @@
         }
       },
       {
-        "prefix": "Button(localization.chat(",
+        "prefix": "actionButton(label: localization.chat(",
         "literal": "\"Stop\"",
         "count": 1,
         "kind": "localized",
@@ -4954,30 +4979,18 @@
         }
       },
       {
-        "prefix": "Button(localization.chat(\"Send\"), systemImage:",
+        "prefix": "actionButton(label: localization.chat(\"Send\"), symbol:",
         "literal": "\"arrow.up\"",
         "count": 1,
         "kind": "allowlisted",
         "reason": "R7"
       },
       {
-        "prefix": "Button(localization.chat(\"Stop\"), systemImage:",
+        "prefix": "actionButton(label: localization.chat(\"Stop\"), symbol:",
         "literal": "\"stop.fill\"",
         "count": 1,
         "kind": "allowlisted",
         "reason": "R7"
-      },
-      {
-        "prefix": "Text(localization.chat(",
-        "literal": "\"Enter / ⌘Enter to send · Shift+Enter for a new line\\nConfirm IME composition before sending.\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Enter / ⌘Enter to send · Shift+Enter for a new line\nConfirm IME composition before sending."
-          ]
-        }
       }
     ],
     "Sources/ChatUI/CompositionTextView.swift": [
@@ -5841,6 +5854,39 @@
         "reason": "R7"
       },
       {
+        "prefix": ".accessibilityIdentifier(",
+        "literal": "\"message.\\(message.id.rawValue).body\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": ".accessibilityIdentifier(",
+        "literal": "\"message.\\(message.id.rawValue).metadata\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": ".accessibilityIdentifier(",
+        "literal": "\"message.\\(message.id.rawValue).role\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": ".accessibilityLabel(copied ? localization.chat(",
+        "literal": "\"Copied to clipboard\"",
+        "count": 1,
+        "kind": "localized",
+        "reason": "R4",
+        "keys": {
+          "ChatUI": [
+            "Copied to clipboard"
+          ]
+        }
+      },
+      {
         "prefix": ".accessibilityLabel(localization.chat(",
         "literal": "\"{language} code block, horizontally scrollable\"",
         "count": 1,
@@ -5889,18 +5935,6 @@
         "count": 1,
         "kind": "allowlisted",
         "reason": "R7"
-      },
-      {
-        "prefix": ".buttonStyle(.borderless).accessibilityLabel(copied ? localization.chat(",
-        "literal": "\"Copied to clipboard\"",
-        "count": 1,
-        "kind": "localized",
-        "reason": "R4",
-        "keys": {
-          "ChatUI": [
-            "Copied to clipboard"
-          ]
-        }
       },
       {
         "prefix": ".help(copied ? localization.chat(",
@@ -5973,48 +6007,6 @@
             "Empty message"
           ]
         }
-      },
-      {
-        "prefix": "[",
-        "literal": "\"https\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "[\"https\",",
-        "literal": "\"http\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "[\"https\", \"http\"].contains(url.scheme?.lowercased() ??",
-        "literal": "\"\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "blocks.append(.code(language: current.language, text: code.joined(separator:",
-        "literal": "\"\\n\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "blocks.append(.code(language: current.language, text: code.joined(separator: \"\\n\") + (code.isEmpty ?",
-        "literal": "\"\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "blocks.append(.code(language: current.language, text: code.joined(separator: \"\\n\") + (code.isEmpty ? \"\" :",
-        "literal": "\"\\n\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
       },
       {
         "prefix": "case .assistant:",
@@ -6102,90 +6094,6 @@
         "reason": "R7"
       },
       {
-        "prefix": "flushParagraph(); blocks.append(.listItem(",
-        "literal": "\"•\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "for line in source.replacingOccurrences(of:",
-        "literal": "\"\\r\\n\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "for line in source.replacingOccurrences(of: \"\\r\\n\", with:",
-        "literal": "\"\\n\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "for line in source.replacingOccurrences(of: \"\\r\\n\", with: \"\\n\").components(separatedBy:",
-        "literal": "\"\\n\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "if !paragraph.isEmpty { blocks.append(.paragraph(paragraph.joined(separator:",
-        "literal": "\"\\n\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "if (1...6).contains(headingLevel), trimmed.dropFirst(headingLevel).first ==",
-        "literal": "\" \"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "if count >= 3 && (character !=",
-        "literal": "\"`\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "if count >= 3 && (character != \"`\" || !info.contains(",
-        "literal": "\"`\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "if let character = trimmed.first, character ==",
-        "literal": "\"`\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "if let character = trimmed.first, character == \"`\" || character ==",
-        "literal": "\"~\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "if let fence { blocks.append(.code(language: fence.language, text: code.joined(separator:",
-        "literal": "\"\\n\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "let headingLevel = trimmed.prefix(while: { $0 ==",
-        "literal": "\"#\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
         "prefix": "userInfo: [.announcement: copied ? localization.chat(",
         "literal": "\"Copied to clipboard\"",
         "count": 1,
@@ -6208,69 +6116,6 @@
             "Copy failed"
           ]
         }
-      },
-      {
-        "prefix": "} else if [",
-        "literal": "\"- \"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "} else if [\"- \",",
-        "literal": "\"* \"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "} else if [\"- \", \"* \",",
-        "literal": "\"+ \"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "} else if let range = trimmed.range(of:",
-        "literal": "#\"^\\d+[.)]\\s+\"#",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "} else if trimmed ==",
-        "literal": "\"---\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "} else if trimmed == \"---\" || trimmed ==",
-        "literal": "\"***\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "} else if trimmed == \"---\" || trimmed == \"***\" || trimmed ==",
-        "literal": "\"___\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "} else if trimmed.hasPrefix(",
-        "literal": "\"> \"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
-      },
-      {
-        "prefix": "} else if trimmed.hasPrefix(\"> \") || trimmed ==",
-        "literal": "\">\"",
-        "count": 1,
-        "kind": "allowlisted",
-        "reason": "R7"
       },
       {
         "prefix": "} label: { Label(copied ? localization.chat(",
@@ -7207,6 +7052,190 @@
             "Reset to System"
           ]
         }
+      }
+    ],
+    "Sources/ChatUI/MessageMarkdown.swift": [
+      {
+        "prefix": "[",
+        "literal": "\"https\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "[\"https\",",
+        "literal": "\"http\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "[\"https\", \"http\"].contains(url.scheme?.lowercased() ??",
+        "literal": "\"\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "code =",
+        "literal": "\"\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "flushParagraph(); blocks.append(.listItem(",
+        "literal": "\"•\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "if !paragraph.isEmpty { blocks.append(.paragraph(paragraph.joined(separator:",
+        "literal": "\"\\n\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "if (1...6).contains(headingLevel), trimmed.dropFirst(headingLevel).first ==",
+        "literal": "\" \"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "if count >= 3 && (character !=",
+        "literal": "\"`\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "if count >= 3 && (character != \"`\" || !info.contains(",
+        "literal": "\"`\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "if let character = trimmed.first, character ==",
+        "literal": "\"`\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "if let character = trimmed.first, character == \"`\" || character ==",
+        "literal": "\"~\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "let headingLevel = trimmed.prefix(while: { $0 ==",
+        "literal": "\"#\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "let line = rawLine.hasSuffix(",
+        "literal": "\"\\r\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "let lines = source.components(separatedBy:",
+        "literal": "\"\\n\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "var code =",
+        "literal": "\"\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "} else if [",
+        "literal": "\"- \"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "} else if [\"- \",",
+        "literal": "\"* \"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "} else if [\"- \", \"* \",",
+        "literal": "\"+ \"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "} else if let range = trimmed.range(of:",
+        "literal": "#\"^\\d+[.)]\\s+\"#",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "} else if trimmed ==",
+        "literal": "\"---\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "} else if trimmed == \"---\" || trimmed ==",
+        "literal": "\"***\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "} else if trimmed == \"---\" || trimmed == \"***\" || trimmed ==",
+        "literal": "\"___\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "} else if trimmed.hasPrefix(",
+        "literal": "\"> \"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "} else if trimmed.hasPrefix(\"> \") || trimmed ==",
+        "literal": "\">\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "} else { code += rawLine + (index < lines.count - 1 ?",
+        "literal": "\"\\n\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
+      },
+      {
+        "prefix": "} else { code += rawLine + (index < lines.count - 1 ? \"\\n\" :",
+        "literal": "\"\"",
+        "count": 1,
+        "kind": "allowlisted",
+        "reason": "R7"
       }
     ]
   },
