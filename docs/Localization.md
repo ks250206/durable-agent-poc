@@ -104,6 +104,8 @@ Templates use named `{count}`/`{name}` placeholders. Names use ASCII letters/dig
 `{{` and `}}` escape braces. Translations may reorder/repeat names but must preserve their set.
 The supplied argument-name set must match exactly. Substitution happens once: captured text with
 braces, `%`, Markdown, or code is not interpreted. `%d`/`%@`/`%n` are ordinary text, not formats.
+Malformed English entries do not block a valid explicit fallback or source key from defining the
+placeholder contract and rendering. Valid English entries continue to define the required placeholder set.
 Invalid translations fall back to English; invalid caller contracts safely return the source fallback/key
 without substitution. Tests/validators must catch these defects; a safe fallback is not coverage success.
 

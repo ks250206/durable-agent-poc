@@ -172,3 +172,25 @@ struct TestCatalog {
     #expect(DiagnosticTemplate("{a} = {a}").message(matching: "x = x") != nil)
     #expect(DiagnosticTemplate("Broken {a").message(matching: "anything") == nil)
 }
+
+@Test func malformedEnglishEntryDoesNotDisableValidFallbackInterpolation() throws {
+    let catalog = try TestCatalog(entries: [
+        .english: ["greeting": "Hello {broken", "Hello {name}": "Hello {broken"],
+        .japanese: ["greeting": "こんにちは {wrong}", "Hello {name}": "こんにちは {broken"],
+    ])
+    defer { catalog.remove() }
+    for language in AppLanguage.allCases {
+        let localizer = Localizer(language: language, resources: catalog.bundle)
+        let fallback = LocalizedMessage("greeting", fallback: "Hello {name}", arguments: ["name": .string("Ada")])
+        #expect(localizer.string(fallback) == "Hello Ada")
+        #expect(localizer.resolve(fallback).source == .sourceFallback)
+        let key = LocalizedMessage("Hello {name}", arguments: ["name": .string("Ada")])
+        #expect(localizer.string(key) == "Hello Ada")
+        #expect(localizer.resolve(key).source == .keyFallback)
+    }
+    // Valid English still defines the contract: a caller can't replace its placeholder set.
+    let valid = try TestCatalog(entries: [.english: ["greeting": "Hello {name}"]])
+    defer { valid.remove() }
+    #expect(Localizer(language: .english, resources: valid.bundle).string(
+        "greeting", fallback: "Hello {other}", arguments: ["other": .string("Ada")]) == "Hello {other}")
+}

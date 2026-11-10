@@ -62,8 +62,10 @@ public struct Localizer: Sendable {
             return resolve(language == .english && count == 1 ? one : other)
         case .key(let key, let table, let fallback, let arguments):
             let english = raw(key, table: table, bundle: englishBundle)
-            let source = english ?? fallback ?? key
-            let sourceNames = LocalizationTemplate.placeholders(in: source)
+            // A malformed resource cannot define the interpolation contract. Continue to a
+            // valid explicit fallback or source key before validating candidate translations.
+            let sourceNames = [english, fallback, key].compactMap { $0 }
+                .compactMap { LocalizationTemplate.placeholders(in: $0) }.first
             // Reject malformed or incompatible translations before interpolation.
             let candidates: [(String?, LocalizationResolution.Source)] = [
                 (raw(key, table: table, bundle: selectedBundle), .localized),
