@@ -4,7 +4,7 @@ import SwiftUI
 // Explicit property wrapper for SDKs that also expose the SwiftUI State macro.
 private typealias PiStoredState<Value> = SwiftUI.State<Value>
 
-/// Native settings surface. #9 injects the service and copies onSelection into ChatStore.modelSelection.
+/// Native settings surface. AppSession injects the service and copies onSelection into ChatStore.modelSelection.
 /// This view owns its authentication task and cancels it when dismissed.
 @MainActor
 public struct ProviderSettingsView: View {
@@ -39,7 +39,7 @@ public struct ProviderSettingsView: View {
                 }
                 .disabled(working || signingIn != nil)
                 if let status = current {
-                    LabeledContent("Status", value: statusText(status.authentication))
+                    LabeledContent("Status", value: statusText(status))
                     if status.configuration.account.option == .apiKey {
                         SecureField("API key", text: $apiKey)
                             .disabled(working)
@@ -53,15 +53,27 @@ public struct ProviderSettingsView: View {
                         }
                         Text("The key is stored in Keychain. Its value is never loaded into this field.")
                             .font(.caption).foregroundStyle(.secondary)
+                    } else if status.configuration.account == CodexProviderSettingsService.account {
+                        TextField("Codex CLI absolute path (blank: discover)", text: $executablePath)
+                            .accessibilityIdentifier("settings.codex-path")
+                            .disabled(working)
+                        Button("Save Codex CLI path") { saveExecutable(status) }
+                            .disabled(working).accessibilityIdentifier("settings.codex-save-path")
+                        Text("Install the official Codex CLI, or enter its absolute executable path. Only use a trusted executable.")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Text(CodexProviderSettingsService.loginInstructions)
+                            .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                        Text("This reuses your existing Codex CLI ChatGPT login, separately from Pi ChatGPT OAuth and Cursor. API-key CLI authentication is unsupported. Credentials remain owned by the official CLI.")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Text("Usage limits and remaining quota are unknown here; login detection does not guarantee model access or availability.")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Button("Refresh existing CLI login and models") { operate {} }
+                            .disabled(working).accessibilityIdentifier("settings.codex-refresh")
                     } else if status.configuration.account.option == .cursor {
                         TextField("Cursor CLI absolute path (blank: discover)", text: $executablePath)
                             .disabled(working || signingIn != nil)
                         Button("Save CLI path") {
-                            var configuration = status.configuration
-                            let path = executablePath.trimmingCharacters(in: .whitespacesAndNewlines)
-                            configuration.executablePath = path.isEmpty ? nil : path
-                            let saved = configuration
-                            operate { try await service.update(saved) }
+                            saveExecutable(status)
                         }.disabled(working || signingIn != nil)
                         Text(CursorProviderSettingsService.loginInstructions)
                             .font(.caption).foregroundStyle(.secondary)
@@ -130,7 +142,11 @@ public struct ProviderSettingsView: View {
     }
 
     private var current: ProviderStatus? { statuses.first { $0.configuration.account == account } }
-    private func statusText(_ state: AuthenticationState) -> String {
+    private func statusText(_ status: ProviderStatus) -> String {
+        let state = status.authentication
+        if status.configuration.account == CodexProviderSettingsService.account, state == .configured {
+            return "Existing CLI ChatGPT login detected"
+        }
         if signingIn == account { return "Signing in…" }
         switch state {
         case .unconfigured: return "Not configured"
@@ -168,6 +184,13 @@ public struct ProviderSettingsView: View {
             catch { failure = "The settings operation failed. Check the provider and try again." }
             await refresh()
         }
+    }
+    private func saveExecutable(_ status: ProviderStatus) {
+        var configuration = status.configuration
+        let path = executablePath.trimmingCharacters(in: .whitespacesAndNewlines)
+        configuration.executablePath = path.isEmpty ? nil : path
+        let saved = configuration
+        operate { try await service.update(saved) }
     }
     private func saveKey() {
         guard let account, !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }

@@ -1,6 +1,7 @@
 import AgentRuntime
 import AppKit
 import ChatCore
+import Darwin
 import SwiftUI
 import Testing
 @testable import ChatUI
@@ -162,5 +163,133 @@ struct NativeAppTests {
         await startup.value
         if let root = session.testDirectory { #expect(!FileManager.default.fileExists(atPath: root.path)) }
         #expect(session.settings == nil)
+    }
+}
+
+private func fixtureCalls(_ root: URL) throws -> [[String: Any]] {
+    let url = root.appendingPathComponent("Codex/fixture-calls.jsonl")
+    guard FileManager.default.fileExists(atPath: url.path) else { return [] }
+    return try String(contentsOf: url, encoding: .utf8).split(separator: "\n").map {
+        try #require(JSONSerialization.jsonObject(with: Data($0.utf8)) as? [String: Any])
+    }
+}
+
+extension NativeAppTests {
+    @Test func codexSettingsExplicitSelectionSendStopAndDurableReopen() async throws {
+        let session = AppSession(arguments: ["DurableChat", "--test-runtime"])
+        await session.start()
+        let store = try #require(session.store), settings = try #require(session.settings)
+        try await eventually { store.canSend }
+        let root = try #require(session.testDirectory)
+        let statuses = try await settings.snapshot()
+        let status = try #require(statuses.first { $0.configuration.account == CodexProviderSettingsService.account })
+        #expect(status.configuration.selectedModelID == nil && status.authentication == .configured)
+        #expect(status.models.map(\.id.modelID) == ["simulated-codex"])
+        await #expect(throws: (any Error).self) {
+            try await settings.update(ProviderConfiguration(account: CodexProviderSettingsService.account,
+                executablePath: "/usr/bin/false"))
+        }
+        await #expect(throws: (any Error).self) {
+            try await settings.update(ProviderConfiguration(account: CodexProviderSettingsService.account))
+        }
+        let original = store.modelSelection
+        var selections: [ModelSelection?] = []
+        let browse = HostedApp(ProviderSettingsView(service: settings, initialAccount: CodexProviderSettingsService.account) { selections.append($0) }, width: 680, height: 900)
+        try await Task.sleep(for: .milliseconds(300))
+        try browse.capture("app-provider-settings-codex-unselected")
+        browse.close()
+        #expect(selections.isEmpty && store.modelSelection == original)
+        let model = try #require(status.models.first?.id)
+        var configuration = status.configuration; configuration.selectedModelID = model.modelID
+        try await settings.update(configuration)
+        #expect(store.modelSelection == original) // A persisted settings picker choice does not apply itself.
+        await session.useModel(model)
+        try await eventually { store.modelSelection == model && store.selectedConversationID == nil }
+        let origin = try #require(await store.createConversation(title: "Simulated Codex • native integration"))
+        try await eventually { store.canSend }
+        let hosted = HostedApp(NativeWorkspaceView(session: session), width: 1200)
+        defer { hosted.close() }
+        try await eventually { !hosted.descendants(CompositionNSTextView.self).isEmpty }
+        let editor = try #require(hosted.descendants(CompositionNSTextView.self).first)
+        #expect(hosted.window.makeFirstResponder(editor))
+        editor.insertText("isolated native Codex submission", replacementRange: NSRange(location: NSNotFound, length: 0))
+        try await eventually { store.draft == editor.string }
+        editor.keyDown(with: try #require(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: hosted.window.windowNumber, context: nil, characters: "\r", charactersIgnoringModifiers: "\r", isARepeat: false, keyCode: 36)))
+        try await eventually { store.messages.last?.role == .assistant && store.messages.last?.content.contains("SIMULATED Codex") == true }
+        try hosted.capture("app-codex-simulated-streaming")
+        let cursor = ConversationID("cursor:conversation:simulated-history")
+        await store.selectConversation(cursor)
+        try await eventually { store.selectedConversationID == cursor }
+        await store.stop(conversationID: origin)
+        try await eventually { store.loadedConversations[origin]?.activity == .idle }
+        let stopped = try #require(store.loadedConversations[origin])
+        #expect(stopped.messages.last?.status == .stopped)
+        #expect(stopped.messages.allSatisfy { !$0.content.contains("LATE AFTER STOP") })
+        #expect(store.messages.count == 48 && store.selectedConversationID == cursor)
+        await store.selectConversation(origin)
+        try await eventually { store.modelSelection == model && store.canSend }
+        #expect(await store.send("fixture-complete"))
+        try await eventually { !store.isSending && store.messages.count == 4 }
+        let savedMessages = store.messages
+        let settingsHost = HostedApp(NativeSettingsView(session: session), width: 680, height: 900)
+        try await Task.sleep(for: .milliseconds(200))
+        try settingsHost.capture("app-provider-settings-codex-selected")
+        settingsHost.close()
+        #expect(store.modelSelection == model)
+        let copy = FileManager.default.temporaryDirectory.appendingPathComponent("DurableChat-Reopen-\(UUID())")
+        try FileManager.default.copyItem(at: root, to: copy)
+        defer { try? FileManager.default.removeItem(at: copy) }
+        let calls = try fixtureCalls(root)
+        await session.shutdown()
+        #expect(!FileManager.default.fileExists(atPath: root.path))
+        for call in calls where ["launch", "owned-child"].contains(call["method"] as? String ?? "") {
+            #expect(kill(try #require(call["pid"] as? Int32), 0) != 0)
+        }
+        let reopened = AppSession(arguments: ["DurableChat", "--test-runtime"], isolatedDirectory: copy)
+        await reopened.start()
+        let restored = try #require(reopened.store)
+        try await eventually { restored.selectedConversationID == origin && restored.canSend }
+        #expect(restored.modelSelection == model && restored.messages == savedMessages)
+        let reopenedHost = HostedApp(NativeWorkspaceView(session: reopened), width: 400)
+        try await Task.sleep(for: .milliseconds(100)); try reopenedHost.capture("app-codex-reopened-400")
+        reopenedHost.close()
+        #expect(await restored.send("fixture-complete"))
+        try await eventually { !restored.isSending && restored.messages.count == 6 }
+        #expect(try fixtureCalls(copy).filter { $0["method"] as? String == "thread/resume" }.count == 2)
+        await reopened.shutdown()
+    }
+
+    @Test func codexStartupFailureNeverProbesAndReleasesLockWhileSessionLives() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("DurableChat-Failed-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let corrupt = Data("invalid routing archive".utf8)
+        try corrupt.write(to: root.appendingPathComponent("routing.json"))
+        let session = AppSession(arguments: ["DurableChat", "--test-runtime"], isolatedDirectory: root)
+        await session.start()
+        #expect(session.failure != nil && session.store == nil && session.settings == nil)
+        #expect(try fixtureCalls(root).isEmpty)
+        #expect(try Data(contentsOf: root.appendingPathComponent("routing.json")) == corrupt)
+        let settings = try CodexProviderSettingsService(storageDirectory: root.appendingPathComponent("Codex"))
+        let backend = try CodexChatBackend(storageDirectory: root.appendingPathComponent("Codex"), settings: settings)
+        await backend.shutdown(); await settings.shutdown()
+        await session.shutdown()
+        #expect(!FileManager.default.fileExists(atPath: root.path))
+    }
+
+    @Test func codexSettingsProbeIsCancelledOnEarlyShutdownWithoutPersonalCLI() async throws {
+        let session = AppSession(arguments: ["DurableChat", "--test-runtime"])
+        await session.start()
+        let root = try #require(session.testDirectory), service = try #require(session.settings)
+        try Data("preflight".utf8).write(to: root.appendingPathComponent("Codex/fixture-mode"))
+        let refresh = Task { try await service.snapshot() }
+        try await eventually { FileManager.default.fileExists(atPath: root.appendingPathComponent("Codex/fixture-probing").path) }
+        let calls = try fixtureCalls(root)
+        await session.shutdown()
+        await #expect(throws: (any Error).self) { _ = try await refresh.value }
+        #expect(!FileManager.default.fileExists(atPath: root.path))
+        for call in calls where call["method"] as? String == "launch" {
+            #expect(kill(try #require(call["pid"] as? Int32), 0) != 0)
+        }
     }
 }

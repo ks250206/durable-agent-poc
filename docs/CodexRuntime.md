@@ -1,8 +1,8 @@
 # Codex CLI runtime (#19)
 
 This standalone AgentRuntime adapter reuses **the existing official Codex CLI ChatGPT login**.
-It is a separate route from PiDurableKit ChatGPT OAuth. Application/router/settings-view composition
-belongs to #21; this change intentionally leaves that route unsupported by the existing router.
+It is a separate route from PiDurableKit ChatGPT OAuth. Application/router/settings-view composition is now connected by #21; see [Integration.md](Integration.md).
+The adapter remains independently usable through the handoff below.
 Package.swift and dependencies are unchanged.
 
 ## Public handoff for #21
@@ -40,6 +40,8 @@ await settings.shutdown()
   then refresh. `login`, `logout`, and `setAPIKey` throw safe unsupported/instruction errors;
   `cancelLogin` is a no-op because this service never starts login. They never mutate the CLI session.
   `shutdown()` cancels and awaits active probes. Do not invoke a real probe merely for QA.
+  #21 adds an optional `isolatedExecutable` constructor constraint used by the app fixture: it pins discovery
+  and rejects changing/clearing the executable path, without starting a process. Normal callers omit it.
 - `CodexChatBackend` implements every `ChatBackend` method. `refreshConnection()` is an explicit
   status refresh, useful after a settings change. Constructors and local history browsing work offline.
   `shutdown()` is required: it cancels pending admissions, interrupts known turns, kills/awaits owned
@@ -141,9 +143,9 @@ swift test -Xswiftc -plugin-path \
 ```
 
 No personal account read, real app-server login/logout/model/catalog/turn request, OAuth token extraction,
-or production credential access is used for tests. Live CLI account entitlement, real model streaming,
-and #21 native UI/router integration are not certified by executable fixtures. Existing Pi/Cursor
-contracts and routes remain independently exercised by their existing test suites.
+or production credential access is used for tests. Live CLI account entitlement and real model streaming
+are not certified by executable fixtures; #21 native UI/router verification is recorded separately in
+Integration.md. Existing Pi/Cursor contracts and routes remain independently exercised by their existing test suites.
 
 CI harness note: native AppKit host suites share a serialized parent because focus/key-window state
 is process-global. Their bounded waits service the event loop. Fixture RPC budgets are 5 seconds

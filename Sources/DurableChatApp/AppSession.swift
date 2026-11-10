@@ -20,8 +20,10 @@ final class AppSession {
     private var observation: Task<Void, Never>?
     private var startup: Task<Void, Never>?
     private var settingsRevision = 0
+    private let isolatedDirectory: URL?
 
-    init(arguments: [String] = ProcessInfo.processInfo.arguments) {
+    init(arguments: [String] = ProcessInfo.processInfo.arguments, isolatedDirectory: URL? = nil) {
+        self.isolatedDirectory = isolatedDirectory
         mode = arguments.contains("--demo") ? .demo : (arguments.contains("--test-runtime") ? .testRuntime : .live)
     }
 
@@ -44,12 +46,15 @@ final class AppSession {
             return
         }
         var openedPi: PiChatBackend?
+        var openedCodex: CodexChatBackend?
+        var openedCodexSettings: CodexProviderSettingsService?
         do {
             let root: URL
             let piSettings: PiProviderSettingsService
             let cursorSettings: CursorProviderSettingsService
+            let codexSettings: CodexProviderSettingsService
             if mode == .testRuntime {
-                root = FileManager.default.temporaryDirectory.appendingPathComponent("DurableChat-Isolated-\(UUID())", isDirectory: true)
+                root = isolatedDirectory ?? FileManager.default.temporaryDirectory.appendingPathComponent("DurableChat-Isolated-\(UUID())", isDirectory: true)
                 testDirectory = root
                 let configuration = URLSessionConfiguration.ephemeral
                 configuration.protocolClasses = [DenyTestNetwork.self]
@@ -69,21 +74,42 @@ final class AppSession {
                 cursorSettings = try CursorProviderSettingsService(storageDirectory: cursorRoot)
                 try await cursorSettings.update(ProviderConfiguration(account: CursorProviderSettingsService.account,
                     selectedModelID: "simulated-cursor", executablePath: cursorRoot.appendingPathComponent("simulated-agent").path))
+                let codexRoot = root.appendingPathComponent("Codex", isDirectory: true)
+                try TestRuntimeFixture.prepareCodex(at: codexRoot)
+                codexSettings = try CodexProviderSettingsService(storageDirectory: codexRoot, requestTimeout: 5,
+                    isolatedExecutable: codexRoot.appendingPathComponent("simulated-codex"))
+                openedCodexSettings = codexSettings
+                // Pin every probe and generation to our executable before taking any snapshot.
+                if !FileManager.default.fileExists(atPath: codexRoot.appendingPathComponent("preferences.json").path) {
+                    try await codexSettings.update(ProviderConfiguration(account: CodexProviderSettingsService.account,
+                        executablePath: codexRoot.appendingPathComponent("simulated-codex").path))
+                } else {
+                    // A copied QA workspace keeps its explicit model; it can never discover the personal CLI.
+                    let configuration = try JSONDecoder().decode(ProviderConfiguration.self,
+                        from: Data(contentsOf: codexRoot.appendingPathComponent("preferences.json")))
+                    try await codexSettings.update(ProviderConfiguration(account: CodexProviderSettingsService.account,
+                        selectedModelID: configuration.selectedModelID, executablePath: codexRoot.appendingPathComponent("simulated-codex").path))
+                }
             } else {
                 root = try PiChatBackend.applicationSupportDirectory()
                 piSettings = try PiProviderSettingsService.open(directory: root)
                 cursorSettings = try CursorProviderSettingsService(storageDirectory: root.appendingPathComponent("Cursor", isDirectory: true))
+                codexSettings = try CodexProviderSettingsService(storageDirectory: root.appendingPathComponent("Codex", isDirectory: true))
+                openedCodexSettings = codexSettings
             }
             let pi = try await PiChatBackend.open(settings: piSettings, databaseURL: root.appendingPathComponent("conversations.sqlite"))
             openedPi = pi
             let cursor = try CursorChatBackend(storageDirectory: root.appendingPathComponent("Cursor", isDirectory: true), settings: cursorSettings)
-            let router = try await ChatBackendRouter.open(pi: pi, cursor: cursor, preferencesURL: root.appendingPathComponent("routing.json"))
+            let codex = try CodexChatBackend(storageDirectory: root.appendingPathComponent("Codex", isDirectory: true), settings: codexSettings)
+            openedCodex = codex
+            let restoring = FileManager.default.fileExists(atPath: root.appendingPathComponent("routing.json").path)
+            let router = try await ChatBackendRouter.open(pi: pi, cursor: cursor, codex: codex, preferencesURL: root.appendingPathComponent("routing.json"))
             self.router = router
-            let composite = CompositeProviderSettingsService(pi: piSettings, cursor: cursorSettings)
+            let composite = CompositeProviderSettingsService(pi: piSettings, cursor: cursorSettings, codex: codexSettings)
             await composite.setObserver { [weak router] statuses in await router?.updateProviderStatuses(statuses) }
             settings = composite
             _ = try await composite.snapshot()
-            if mode == .testRuntime {
+            if mode == .testRuntime && !restoring {
                 try await router.useModel(ModelSelection(account: ProviderAccount(option: .apiKey, providerID: "faux"), modelID: "faux-1"))
                 _ = try await router.createConversation(title: "Simulated Pi • scratch conversation")
             }
@@ -96,8 +122,12 @@ final class AppSession {
             self.store = store
             observation = Task { await store.start() }
         } catch {
+            await settings?.shutdown()
+            await openedCodexSettings?.shutdown()
             if let router { try? await router.shutdown() }
             else { try? await openedPi?.close() }
+            await openedCodex?.shutdown()
+            settings = nil; router = nil
             failure = "DurableChat could not open its saved workspace. Check that another copy is not running and that Application Support/DurableChat is readable. Your files have not been reset."
         }
     }

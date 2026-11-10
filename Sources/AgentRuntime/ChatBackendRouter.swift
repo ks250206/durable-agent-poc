@@ -1,10 +1,10 @@
 import ChatCore
 import Foundation
 
-/// Owns both subscriptions. Child selection never controls workspace selection.
+/// Owns each backend subscription. Child selection never controls workspace selection.
 /// Conversation/account bindings and explicit model choices contain no credentials.
 public actor ChatBackendRouter: ChatBackend {
-    public enum Route: String, CaseIterable, Sendable { case pi, cursor }
+    public enum Route: String, CaseIterable, Sendable { case pi, cursor, codex }
     private struct Preferences: Codable {
         var version = 1
         var activeModel: ModelSelection?
@@ -23,17 +23,21 @@ public actor ChatBackendRouter: ChatBackend {
     private var eventWaiters: [CheckedContinuation<Void, Never>] = []
     private var sends: [ConversationID: (UUID, Task<Void, any Error>)] = [:]
     private var closed = false
+    private var shutdownFinished = false
+    private var shutdownFailed = false
+    private var shutdownWaiters: [CheckedContinuation<Void, Never>] = []
     private var locked = false
     private var waiters: [CheckedContinuation<Void, Never>] = []
 
-    public static func open(pi: any ChatBackend, cursor: any ChatBackend, preferencesURL: URL) async throws -> ChatBackendRouter {
-        let router = try ChatBackendRouter(pi: pi, cursor: cursor, preferencesURL: preferencesURL)
+    public static func open(pi: any ChatBackend, cursor: any ChatBackend, codex: (any ChatBackend)? = nil, preferencesURL: URL) async throws -> ChatBackendRouter {
+        let router = try ChatBackendRouter(pi: pi, cursor: cursor, codex: codex, preferencesURL: preferencesURL)
         await router.observe()
         return router
     }
 
-    private init(pi: any ChatBackend, cursor: any ChatBackend, preferencesURL: URL) throws {
+    private init(pi: any ChatBackend, cursor: any ChatBackend, codex: (any ChatBackend)?, preferencesURL: URL) throws {
         backends = [.pi: pi, .cursor: cursor]
+        if let codex { backends[.codex] = codex }
         self.preferencesURL = preferencesURL
         if FileManager.default.fileExists(atPath: preferencesURL.path) {
             do { preferences = try JSONDecoder().decode(Preferences.self, from: Data(contentsOf: preferencesURL)) }
@@ -46,15 +50,16 @@ public actor ChatBackendRouter: ChatBackend {
 
     public static func route(for account: ProviderAccount) -> Route? {
         switch account.option {
-        case .codexCLI: nil // Runtime composition is owned by #21.
+        case .codexCLI: account == CodexProviderSettingsService.account ? .codex : nil
         case .cursor: account == CursorProviderSettingsService.account ? .cursor : nil
         case .chatGPT: account.providerID == "openai-codex" ? .pi : nil
-        case .apiKey: !account.providerID.isEmpty && account.providerID != "cursor" && account.providerID != "openai-codex" ? .pi : nil
+        case .apiKey: !account.providerID.isEmpty && account.providerID != "cursor" && account.providerID != "openai-codex" && account.providerID != "codex-cli" ? .pi : nil
         }
     }
     private static func route(for id: ConversationID) -> Route? {
         if id.rawValue.hasPrefix("pi:conversation:") { return .pi }
         if id.rawValue.hasPrefix("cursor:conversation:") { return .cursor }
+        if id.rawValue.hasPrefix("codex:conversation:") { return .codex }
         return nil
     }
     private func account(for id: ConversationID) -> ProviderAccount? {
@@ -79,7 +84,7 @@ public actor ChatBackendRouter: ChatBackend {
                 } catch { if !Task.isCancelled { await self?.failed(route) } }
             })
         }
-        if states.count != Route.allCases.count { await withCheckedContinuation { initialWaiter = $0 } }
+        if states.count != backends.count { await withCheckedContinuation { initialWaiter = $0 } }
         if let id = preferences.selected {
             if !summaries.contains(where: { $0.id == id }) { preferences.selected = nil }
             else { preferences.activeModel = account(for: id).flatMap { model(for: $0) } }
@@ -106,7 +111,7 @@ public actor ChatBackendRouter: ChatBackend {
             state.loadedConversations.append(conversation)
             states[route] = state
         }
-        if states.count == Route.allCases.count { initialWaiter?.resume(); initialWaiter = nil }
+        if states.count == backends.count { initialWaiter?.resume(); initialWaiter = nil }
         let pending = eventWaiters; eventWaiters.removeAll(); for waiter in pending { waiter.resume() }
         publish()
     }
@@ -114,7 +119,7 @@ public actor ChatBackendRouter: ChatBackend {
         var state = states[route] ?? ChatSnapshot()
         state.connection = .failed("This backend's observation stopped. Quit and reopen DurableChat.")
         states[route] = state
-        if states.count == Route.allCases.count { initialWaiter?.resume(); initialWaiter = nil }
+        if states.count == backends.count { initialWaiter?.resume(); initialWaiter = nil }
         let pending = eventWaiters; eventWaiters.removeAll(); for waiter in pending { waiter.resume() }
         publish()
     }
@@ -133,7 +138,7 @@ public actor ChatBackendRouter: ChatBackend {
         }
         let notice: String?
         if selected != nil && selectedAccount == nil {
-            notice = "Saved Pi history has no recorded account. Browse it here; use Settings to choose a model, then create a new conversation to send."
+            notice = "Saved history has no recorded account. Browse it here; use Settings to choose a model, then create a new conversation to send."
         } else if active == nil { notice = "Choose a provider and model in Settings, then use Use selected model. History remains available without signing in." }
         else if selected == nil { notice = "Model selected. Create a new conversation to send with \(active!.account.providerID)." }
         else if !connection.canSend { notice = "This conversation's provider or model is unavailable. History is still available; check Settings to reconnect." }
@@ -224,9 +229,13 @@ public actor ChatBackendRouter: ChatBackend {
         sends[conversationID]?.1.cancel()
         try await backend.stop(conversationID: conversationID)
     }
-    /// Explicit shutdown releases the Cursor owner as well as cancelling every origin's work.
+    /// Cancels every origin and awaits owned Codex processes/lock release even while the router is retained.
     public func shutdown() async throws {
-        guard !closed else { return }
+        if closed {
+            if !shutdownFinished { await withCheckedContinuation { shutdownWaiters.append($0) } }
+            if shutdownFailed { throw ChatBackendError.unavailable("Some work could not be saved during shutdown.") }
+            return
+        }
         closed = true
         for watcher in watchers { watcher.cancel() }; watchers.removeAll()
         let pending = sends.values.map(\.1); for task in pending { task.cancel() }
@@ -241,9 +250,12 @@ public actor ChatBackendRouter: ChatBackend {
         if let pi = backends[.pi] as? PiChatBackend {
             do { try await pi.close() } catch { failed = true }
         }
+        if let codex = backends[.codex] as? CodexChatBackend { await codex.shutdown() }
         backends.removeAll(); sends.removeAll()
         let waiting = eventWaiters; eventWaiters.removeAll(); for waiter in waiting { waiter.resume() }
         publish(); for subscriber in subscribers.values { subscriber.finish() }; subscribers.removeAll()
+        shutdownFailed = failed; shutdownFinished = true
+        for waiter in shutdownWaiters { waiter.resume() }; shutdownWaiters.removeAll()
         if failed { throw ChatBackendError.unavailable("Some work could not be saved during shutdown.") }
     }
     private func checkOpen() throws { if closed { throw ChatBackendError.disconnected }; try Task.checkCancellation() }

@@ -17,8 +17,15 @@ struct NativeWorkspaceView: View {
             if let store = session.store {
                 if session.mode != .demo {
                     HStack(alignment: .center) {
-                        Text(store.routingNotice ?? "Ready. Only an explicit Send starts a model request.")
-                            .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(store.routingNotice ?? "Ready. Only an explicit Send starts a model request.")
+                                .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            if store.modelSelection?.account == CodexProviderSettingsService.account {
+                                Text("Codex CLI · existing ChatGPT login · usage limits unknown")
+                                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                    .accessibilityIdentifier("app.codex-route")
+                            }
+                        }
                         Spacer(minLength: 12)
                         Button("Settings…") { openSettings() }
                             .accessibilityIdentifier("app.open-settings")

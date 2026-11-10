@@ -78,7 +78,7 @@ import Darwin
         let url = f.storage.appendingPathComponent("preferences.json")
         #expect((try FileManager.default.attributesOfItem(atPath: url.path)[.posixPermissions] as? NSNumber)?.intValue == 0o600)
         #expect(!String(decoding: try Data(contentsOf: url), as: UTF8.self).contains("fake-key"))
-        #expect(ChatBackendRouter.route(for: f.model.account) == nil) // #21 has not been wired.
+        #expect(ChatBackendRouter.route(for: f.model.account) == .codex) // #21 connects this exact account to the third route.
         await service.shutdown()
     }
 
