@@ -55,8 +55,11 @@ def hang():
     while True: time.sleep(.1)
 if args == ['--help']:
     if (root / 'unsupported').exists(): print('unrelated executable')
-    else: print('Cursor --print --mode ask --model --resume --output-format stream-json --stream-partial-output status login models')
+    else: print('Cursor --trust --print --mode ask --model --resume --output-format stream-json --stream-partial-output status login models')
 elif args == ['status', '--format', 'json']:
+    if (root / 'blockstatus').exists():
+        (root / 'status-started').write_text('1')
+        while (root / 'blockstatus').exists(): time.sleep(.01)
     emit({'isAuthenticated':not (root / 'signedout').exists()})
 elif args == ['models']:
     print('Available models\n\nfixture-model - Fixture model\nother - Other model')
@@ -67,6 +70,7 @@ elif args == ['login']:
 elif args == ['logout']:
     (root / 'signedout').write_text('1')
 elif '--print' in args:
+    if '--trust' not in args: sys.exit(1)
     emit({'type':'system', 'subtype':'init', 'session_id':'fixture-session'})
     emit({'type':'assistant','timestamp_ms':1,'message':{'content':[{'type':'text','text':'partial '}]}})
     if text == 'hang': hang()
@@ -146,7 +150,7 @@ private func settled(_ backend: CursorChatBackend, _ id: ConversationID) async t
         #expect(completed.messages.last?.status == .complete)
         let call = try #require(fixture.printCalls().first)
         let argv = try #require(call["argv"] as? [String])
-        #expect(argv == ["--print", "--mode", "ask", "--output-format", "stream-json", "--stream-partial-output", "--model", "fixture-model", "--workspace", fixture.storage.appendingPathComponent("workspace").path])
+        #expect(argv == ["--print", "--mode", "ask", "--trust", "--output-format", "stream-json", "--stream-partial-output", "--model", "fixture-model", "--workspace", fixture.storage.appendingPathComponent("workspace").path])
         #expect(call["stdin"] as? String == text)
         let actualDirectory = try FileManager.default.attributesOfItem(atPath: #require(call["cwd"] as? String))
         let expectedDirectory = try FileManager.default.attributesOfItem(atPath: fixture.storage.appendingPathComponent("workspace").path)
@@ -244,6 +248,23 @@ private func settled(_ backend: CursorChatBackend, _ id: ConversationID) async t
         let b = try await backend.createConversation(title: nil)
         await #expect(throws: (any Error).self) { try await backend.send(SendRequest(conversationID: b, messageID: request.messageID, text: "hang", model: fixture.model)) }
         try await backend.stop(conversationID: id)
+    }
+
+    @Test func stopDuringPreflightPreventsLaterGeneration() async throws {
+        let fixture = try CursorFixture(); defer { fixture.clean() }
+        let backend = try await fixture.backend()
+        let id = try await backend.createConversation(title: "Cancel preflight")
+        try fixture.marker("blockstatus")
+        let sending = Task { try await backend.send(SendRequest(conversationID: id, text: "Must not generate", model: fixture.model)) }
+        try await eventually { FileManager.default.fileExists(atPath: fixture.root.appendingPathComponent("status-started").path) }
+        try await backend.stop(conversationID: id)
+        await #expect(throws: CancellationError.self) { try await sending.value }
+        try FileManager.default.removeItem(at: fixture.root.appendingPathComponent("blockstatus"))
+        #expect(try fixture.printCalls().isEmpty)
+        #expect(try await backend.snapshot().loadedConversations.first?.messages.isEmpty == true)
+        // A stopped preflight must not clear or block a subsequent preparation.
+        try await backend.send(SendRequest(conversationID: id, text: "New submission", model: fixture.model))
+        #expect(try await settled(backend, id).messages.last?.status == .complete)
     }
 
     @Test func subscriberCancellationReleasesOnlySubscriber() async throws {
@@ -353,7 +374,7 @@ private func settled(_ backend: CursorChatBackend, _ id: ConversationID) async t
                 group.addTask {
                     let process = CursorProcess(executable: fixture.executable, workingDirectory: fixture.storage)
                     do {
-                        try await process.run(arguments: ["--print"], input: i.isMultiple(of: 3) ? "failure" : "success", timeout: 5) { _ in
+                        try await process.run(arguments: ["--print", "--trust"], input: i.isMultiple(of: 3) ? "failure" : "success", timeout: 5) { _ in
                             try await Task.sleep(for: .milliseconds(2))
                         }
                         #expect(!i.isMultiple(of: 3))
@@ -368,18 +389,18 @@ private func settled(_ backend: CursorChatBackend, _ id: ConversationID) async t
     @Test func processTaskCancellationTimeoutLaunchAndOutputBounds() async throws {
         let fixture = try CursorFixture(); defer { fixture.clean() }
         let process = CursorProcess(executable: fixture.executable, workingDirectory: fixture.storage)
-        let running = Task { try await process.run(arguments: ["--print"], input: "hang") { _ in } }
+        let running = Task { try await process.run(arguments: ["--print", "--trust"], input: "hang") { _ in } }
         try await eventually { FileManager.default.fileExists(atPath: fixture.root.appendingPathComponent("childpid").path) }
         running.cancel()
         await #expect(throws: CursorRuntimeError.cancelled) { try await running.value }
         let timed = CursorProcess(executable: fixture.executable, workingDirectory: fixture.storage)
-        await #expect(throws: CursorRuntimeError.timedOut) { try await timed.run(arguments: ["--print"], input: "hang", timeout: 0.2) { _ in } }
+        await #expect(throws: CursorRuntimeError.timedOut) { try await timed.run(arguments: ["--print", "--trust"], input: "hang", timeout: 0.2) { _ in } }
         let missing = CursorProcess(executable: fixture.root.appendingPathComponent("missing"), workingDirectory: fixture.storage)
         await #expect(throws: CursorRuntimeError.launch) { try await missing.run(arguments: []) { _ in } }
         let oversized = CursorProcess(executable: fixture.executable, workingDirectory: fixture.storage)
-        await #expect(throws: CursorRuntimeError.invalidOutput) { try await oversized.run(arguments: ["--print"], input: "oversized") { _ in } }
+        await #expect(throws: CursorRuntimeError.invalidOutput) { try await oversized.run(arguments: ["--print", "--trust"], input: "oversized") { _ in } }
         let orphan = CursorProcess(executable: fixture.executable, workingDirectory: fixture.storage)
-        await #expect(throws: CursorRuntimeError.timedOut) { try await orphan.run(arguments: ["--print"], input: "orphan", timeout: 0.3) { _ in } }
+        await #expect(throws: CursorRuntimeError.timedOut) { try await orphan.run(arguments: ["--print", "--trust"], input: "orphan", timeout: 0.3) { _ in } }
         let orphanPID = try #require(Int32(String(contentsOf: fixture.root.appendingPathComponent("childpid"), encoding: .utf8)))
         try await eventually { kill(orphanPID, 0) != 0 }
         let cancelled = CursorProcess(executable: fixture.executable, workingDirectory: fixture.storage)

@@ -187,7 +187,7 @@ enum CursorFiles {
     static func write<T: Encodable>(_ value: T, to url: URL) throws {
         do {
             let data = try JSONEncoder().encode(value)
-            try data.write(to: url, options: [.atomic, .completeFileProtectionUnlessOpen])
+            try data.write(to: url, options: [.atomic])
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
         } catch { throw CursorRuntimeError.storage }
     }

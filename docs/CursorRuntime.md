@@ -23,11 +23,11 @@ information are not published, logged, or persisted. API-key operations are reje
 Credentials remain entirely inside Cursor's own CLI store. The process environment keeps
 HOME/PATH/locale/temp/XDG location variables, excluding injected API keys/endpoints/tokens.
 
-Every generation uses an argv array, stdin, `--print --mode ask --output-format stream-json
+Every generation uses an argv array, stdin, `--print --mode ask --trust --output-format stream-json
 --stream-partial-output --model <explicit-model> --workspace <app-root>/workspace`. It never
-uses a shell, `--force`, `--yolo`, workspace trust, added roots, or automatic MCP approval.
+uses a shell, `--force`, `--yolo`, added roots, or automatic MCP approval.
 The working directory is the app's isolated `workspace` subdirectory, never the source
-checkout. Ask mode is Cursor's read-only conversational mode; this is a CLI permission
+checkout. Workspace trust is limited to this private app-owned directory so noninteractive CLI startup succeeds. Ask mode remains Cursor's read-only conversational mode; this is a CLI permission
 boundary, not an OS sandbox against a malicious executable or user-configured extensions.
 Only override the executable with a trusted Cursor installation.
 
@@ -45,13 +45,13 @@ Conversation IDs use `cursor:conversation:` and assistant IDs `cursor:assistant:
 are the client's durable idempotency keys. Reusing an accepted ID with identical conversation,
 text, and model is a no-op, including after reopen; conflicting reuse is rejected. Acceptance
 is atomically persisted and published with a busy state before `send` returns. Subscribers
-get an atomic full initial snapshot, and canceling one only removes that observer. Stop
+get an atomic full initial snapshot, and canceling one only removes that observer. Stopping during credential/model preflight cancels the pending CLI checks and prevents a delayed generation from starting. Stop
 preserves the assistant ID/text as stopped, makes the target idle, and leaves selection alone.
 Dropping the backend cancels its active processes.
 
 `conversations.json` stores ordered transcripts, selection, accepted request/model mappings,
 and CLI session IDs; `preferences.json` stores only nonsecret provider preferences. Files
-are private and replaced atomically; a nonblocking exclusive lock prevents two backends
+use atomic replacement and POSIX 0600, without macOS-incompatible Data Protection options; a nonblocking exclusive lock prevents two backends
 writing the same archive. Conversation text can itself be sensitive: these are local
 transcripts, not an encrypted credential vault. Do not put a repository or shared directory
 in place of the app storage root. Successful sessions continue with `--resume <id>`; interrupted,

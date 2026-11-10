@@ -124,7 +124,7 @@ public actor CursorProviderSettingsService: ProviderSettingsService {
 
     static func supports(_ data: Data) -> Bool {
         let help = String(decoding: data, as: UTF8.self)
-        return ["Cursor", "--print", "--mode", "ask", "--model", "--resume", "stream-json", "--stream-partial-output", "status", "login", "models"]
+        return ["Cursor", "--trust", "--print", "--mode", "ask", "--model", "--resume", "stream-json", "--stream-partial-output", "status", "login", "models"]
             .allSatisfy { help.contains($0) }
     }
 

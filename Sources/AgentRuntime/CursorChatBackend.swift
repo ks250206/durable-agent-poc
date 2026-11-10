@@ -28,7 +28,7 @@ public actor CursorChatBackend: ChatBackend {
     private var archive: Archive
     private var connection: ConnectionState = .disconnected
     private var runs: [ConversationID: Run] = [:]
-    private var preparing = Set<ConversationID>()
+    private var preparing: [ConversationID: (token: UUID, task: Task<URL, any Error>)] = [:]
     private var subscribers: [UUID: AsyncThrowingStream<ChatEvent, any Error>.Continuation] = [:]
 
     public init(
@@ -76,6 +76,7 @@ public actor CursorChatBackend: ChatBackend {
 
     deinit {
         for run in runs.values { run.process.cancel() }
+        for preparation in preparing.values { preparation.task.cancel() }
         close(storageLock)
     }
 
@@ -128,12 +129,24 @@ public actor CursorChatBackend: ChatBackend {
         guard !archive.conversations.flatMap(\.messages).contains(where: { $0.id == request.messageID }) else {
             throw ChatBackendError.unavailable("Message ID is already in use.")
         }
-        guard !archive.conversations[i].activity.isBusy, !preparing.contains(request.conversationID) else { throw ChatBackendError.busy }
+        guard !archive.conversations[i].activity.isBusy, preparing[request.conversationID] == nil else { throw ChatBackendError.busy }
         guard request.model.account == CursorProviderSettingsService.account,
               CursorProviderSettingsService.validModel(request.model.modelID) else { throw ChatBackendError.noModel }
-        preparing.insert(request.conversationID)
-        defer { preparing.remove(request.conversationID) }
-        let executable = try await settings.prepare(model: request.model)
+        let preparationToken = UUID()
+        let preparation = Task { [settings] in try await settings.prepare(model: request.model) }
+        preparing[request.conversationID] = (preparationToken, preparation)
+        defer {
+            if preparing[request.conversationID]?.token == preparationToken {
+                preparing.removeValue(forKey: request.conversationID)
+            }
+        }
+        let executable: URL
+        do { executable = try await preparation.value }
+        catch {
+            if preparing[request.conversationID]?.token != preparationToken { throw CancellationError() }
+            throw error
+        }
+        guard preparing[request.conversationID]?.token == preparationToken else { throw CancellationError() }
         try Task.checkCancellation()
         // No suspension between acceptance persistence, publication, and task installation.
         guard !archive.conversations.flatMap(\.messages).contains(where: { $0.id == request.messageID }) else {
@@ -145,7 +158,7 @@ public actor CursorChatBackend: ChatBackend {
         let process = CursorProcess(executable: executable, workingDirectory: workspace)
         let session = archive.sessions[request.conversationID.rawValue]
         let input = try prompt(request: request, conversation: archive.conversations[currentIndex], resume: session != nil)
-        var arguments = ["--print", "--mode", "ask", "--output-format", "stream-json", "--stream-partial-output", "--model", request.model.modelID,
+        var arguments = ["--print", "--mode", "ask", "--trust", "--output-format", "stream-json", "--stream-partial-output", "--model", request.model.modelID,
                          "--workspace", workspace.path]
         if let session { arguments += ["--resume", session] }
         var next = archive
@@ -170,6 +183,7 @@ public actor CursorChatBackend: ChatBackend {
 
     public func stop(conversationID: ConversationID) async throws {
         let i = try index(conversationID)
+        preparing.removeValue(forKey: conversationID)?.task.cancel()
         guard let run = runs.removeValue(forKey: conversationID) else { return }
         run.process.cancel()
         var next = archive
@@ -270,6 +284,8 @@ public actor CursorChatBackend: ChatBackend {
         }
         for run in runs.values { run.process.cancel() }
         runs.removeAll()
+        for preparation in preparing.values { preparation.task.cancel() }
+        preparing.removeAll()
         publish(.snapshot(currentSnapshot()))
     }
 }
