@@ -92,12 +92,12 @@ class CompositionNSTextView: NSTextView {
 
     override func keyDown(with event: NSEvent) {
         let isReturn = event.keyCode == 36 || event.keyCode == 76
-        // Holding the confirmation/send key must never become a second submission.
-        if isReturn && (event.isARepeat || handlingKey) { return }
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        // Repeated confirmation/send keys cannot submit; Shift+Return remains normal editing.
+        if isReturn && (handlingKey || (event.isARepeat && (!modifiers.contains(.shift) || hasMarkedText()))) { return }
         let previousHandlingKey = handlingKey
         let previousMarked = keyBeganWithMarkedText
         let previousSubmissionKey = handlingSubmissionKey
-        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         handlingKey = true
         handlingSubmissionKey = isReturn && modifiers.intersection([.shift, .control, .option]).isEmpty
         keyBeganWithMarkedText = hasMarkedText()
@@ -207,7 +207,12 @@ class CompositionNSTextView: NSTextView {
         // Never write it over preedit, even when it differs from the editor's visible string.
         guard !blocksSubmission, string != draft else { return }
         let selections = selectedRanges.map(\.rangeValue)
-        string = draft
+        let range = NSRange(location: 0, length: (string as NSString).length)
+        guard shouldChangeText(in: range, replacementString: draft) else { return }
+        breakUndoCoalescing()
+        replaceCharacters(in: range, with: draft)
+        didChangeText()
+        breakUndoCoalescing()
         let length = (draft as NSString).length
         selectedRanges = selections.map { range in
             let location = min(range.location, length)

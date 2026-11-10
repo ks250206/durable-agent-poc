@@ -148,6 +148,61 @@ struct CompositionTests {
         #expect(sends == 1)
     }
 
+    @Test func externalDraftClearPreservesValidUndoHistory() throws {
+        let editor = CompositionNSTextView(frame: .zero)
+        editor.allowsUndo = true
+        let window = window(containing: editor)
+        defer { window.close() }
+        #expect(window.makeFirstResponder(editor))
+        let undo = try #require(editor.undoManager)
+        undo.groupsByEvent = false
+        undo.beginUndoGrouping()
+        editor.insertText("Hello 日本語", replacementRange: NSRange(location: NSNotFound, length: 0))
+        undo.endUndoGrouping()
+        undo.beginUndoGrouping()
+        editor.synchronize(draft: "") // Accepted send clears the SwiftUI binding in a later event.
+        undo.endUndoGrouping()
+        #expect(editor.string.isEmpty)
+        #expect(undo.canUndo)
+        undo.undo() // Regression: stale typing ranges previously raised NSRangeException here.
+        #expect(editor.string == "Hello 日本語")
+        undo.redo()
+        #expect(editor.string.isEmpty)
+    }
+
+    @Test func shiftReturnAutoRepeatRemainsNativeEditing() {
+        let editor = CompositionNSTextView(frame: .zero)
+        let window = window(containing: editor)
+        defer { window.close() }
+        var sends = 0
+        editor.onSubmit = { sends += 1 }
+        editor.keyDown(with: key(.shift))
+        editor.keyDown(with: key(.shift, repeat: true))
+        #expect(editor.string == "\n\n")
+        #expect(sends == 0)
+    }
+
+    @Test func taskHopRejectsModelChange() async {
+        let backend = ComposerBackend()
+        let store = ChatStore(backend: backend)
+        let observation = Task { await store.start() }
+        defer { observation.cancel() }
+        store.modelSelection = composerModel
+        await eventually { store.canSend }
+        let input = ComposerInput()
+        let editor = CompositionNSTextView(frame: .zero)
+        let window = window(containing: editor)
+        defer { window.close() }
+        input.attach(editor)
+        editor.onCommittedChange = { store.draft = $0 }
+        editor.insertText("belongs to the selected model", replacementRange: NSRange(location: NSNotFound, length: 0))
+        input.submit(store: store)
+        store.modelSelection = ModelSelection(account: composerModel.account, modelID: "different")
+        await eventually { !input.isSubmitting }
+        #expect(await backend.requests.isEmpty)
+        #expect(!store.draft.isEmpty)
+    }
+
     @Test func markedTextAndSelectionSurviveExternalSynchronization() {
         let editor = CompositionNSTextView(frame: .zero)
         let window = window(containing: editor)

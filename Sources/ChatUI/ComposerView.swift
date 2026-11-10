@@ -74,11 +74,14 @@ final class ComposerInput {
     func submit(store: ChatStore) {
         guard canSubmit(store: store), let editor else { return }
         let submitted = editor.string
+        let conversationID = store.selectedConversationID
+        let model = store.modelSelection
         store.draft = submitted
         isSubmitting = true
         Task { @MainActor in
             defer { isSubmitting = false }
             guard self.editor === editor, !editor.blocksSubmission, store.canSend,
+                  store.selectedConversationID == conversationID, store.modelSelection == model,
                   store.draft == submitted, editor.string == submitted else { return }
             await store.sendDraft()
         }
