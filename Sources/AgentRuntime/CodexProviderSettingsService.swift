@@ -8,12 +8,17 @@ public actor CodexProviderSettingsService: ProviderSettingsService {
     private let workspace: URL
     private let preferencesURL: URL
     private let requestTimeout: TimeInterval
+    private let isolatedExecutablePath: String?
     private var configuration: ProviderConfiguration
     private var processes: [UUID: CodexProcess] = [:]
     private var revision = 0
     private var closed = false
 
-    public init(storageDirectory: URL = CodexProcess.defaultStorageDirectory, requestTimeout: TimeInterval = 20) throws {
+    /// A fixture executable constraint keeps explicit test runtimes from discovering or saving a personal CLI.
+    /// Normal callers leave this nil; no process is launched by construction.
+    public init(storageDirectory: URL = CodexProcess.defaultStorageDirectory, requestTimeout: TimeInterval = 20,
+                isolatedExecutable: URL? = nil) throws {
+        isolatedExecutablePath = isolatedExecutable?.path
         try CodexFiles.prepare(storageDirectory)
         workspace = storageDirectory.resolvingSymlinksInPath().appendingPathComponent("control", isDirectory: true)
         try CodexFiles.prepare(workspace)
@@ -23,10 +28,17 @@ public actor CodexProviderSettingsService: ProviderSettingsService {
         guard configuration.account == Self.account,
               configuration.selectedModelID.map(Self.validIdentifier) ?? true,
               configuration.executablePath.map({ $0.hasPrefix("/") }) ?? true else { throw CodexRuntimeError.storage }
+        if let isolatedExecutablePath {
+            _ = try CodexProcess.discover(executablePath: isolatedExecutablePath)
+            configuration.executablePath = isolatedExecutablePath
+        }
     }
 
     public func update(_ configuration: ProviderConfiguration) async throws {
         try check(configuration.account)
+        if let isolatedExecutablePath, configuration.executablePath != isolatedExecutablePath {
+            throw ChatBackendError.unavailable("Isolated test runtime only supports its simulated Codex executable.")
+        }
         if let model = configuration.selectedModelID, !Self.validIdentifier(model) { throw ChatBackendError.noModel }
         if let path = configuration.executablePath { _ = try CodexProcess.discover(executablePath: path) }
         try CodexFiles.write(configuration, to: preferencesURL)

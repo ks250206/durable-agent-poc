@@ -1,12 +1,14 @@
 import AgentRuntime
 import ChatCore
 import Foundation
+import Darwin
 import Testing
 
 private let piAccount = ProviderAccount(option: .apiKey, providerID: "fixture-pi")
 private let oauthAccount = ProviderAccount(option: .chatGPT, providerID: "openai-codex")
 private let piModel = ModelSelection(account: piAccount, modelID: "pi-model")
 private let cursorModel = ModelSelection(account: CursorProviderSettingsService.account, modelID: "cursor-model")
+private let codexModel = ModelSelection(account: CodexProviderSettingsService.account, modelID: "codex-model")
 private let oauthModel = ModelSelection(account: oauthAccount, modelID: "oauth-model")
 
 private func configured(_ models: [ModelSelection]) -> [ProviderStatus] {
@@ -209,5 +211,130 @@ struct RouterTests {
         #expect(try await router.snapshot().modelContext?.selection == piModel)
         #expect(await pi.sends.map(\.conversationID) == [b])
         try await router.shutdown()
+    }
+}
+
+extension RouterTests {
+    @Test func threeRoutesKeepExactAccountsCapturedOriginsAndPersistWithoutSchemaMigration() async throws {
+        let pi = RoutingFixtureBackend("pi"), cursor = RoutingFixtureBackend("cursor"), codex = RoutingFixtureBackend("codex")
+        let url = try temporaryRoutingURL(); defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        // The pre-Codex v1 routing file remains readable and is not rewritten merely by opening/refreshing.
+        let original = Data(#"{"version":1,"models":[],"accounts":{},"selected":"pi:conversation:saved"}"#.utf8)
+        try original.write(to: url)
+        let router = try await ChatBackendRouter.open(pi: pi, cursor: cursor, codex: codex, preferencesURL: url)
+        await router.updateProviderStatuses(configured([piModel, oauthModel, cursorModel, codexModel]))
+        #expect(try Data(contentsOf: url) == original)
+        let initial = try await router.snapshot()
+        #expect(initial.conversations.map(\.id.rawValue) == ["pi:conversation:saved", "cursor:conversation:saved", "codex:conversation:saved"])
+        #expect(initial.modelContext?.selection == nil && !initial.connection.canSend)
+        #expect(await codex.snapshotReads == 0)
+        #expect(ChatBackendRouter.route(for: codexModel.account) == .codex)
+        #expect(ChatBackendRouter.route(for: ProviderAccount(option: .codexCLI, providerID: "openai-codex")) == nil)
+        #expect(ChatBackendRouter.route(for: ProviderAccount(option: .apiKey, providerID: "codex-cli")) == nil)
+        try await router.selectConversation(ConversationID("codex:conversation:saved"))
+        #expect(try await router.snapshot().modelContext?.notice?.contains("no recorded account") == true)
+        await #expect(throws: (any Error).self) {
+            try await router.send(SendRequest(conversationID: ConversationID("codex:conversation:saved"), text: "unbound", model: codexModel))
+        }
+        var ids: [ConversationID] = []
+        for model in [piModel, oauthModel, cursorModel, codexModel] {
+            try await router.useModel(model)
+            let id = try await router.createConversation(title: model.modelID); ids.append(id)
+            try await router.send(SendRequest(conversationID: id, text: model.modelID, model: model))
+        }
+        let origin = try #require(ids.last)
+        for wrong in [piModel, oauthModel, cursorModel] {
+            await #expect(throws: (any Error).self) {
+                try await router.send(SendRequest(conversationID: origin, text: "wrong account", model: wrong))
+            }
+            await #expect(throws: (any Error).self) {
+                try await router.send(SendRequest(conversationID: ids[0], text: "wrong origin", model: codexModel))
+            }
+        }
+        let store = ChatStore(backend: router)
+        let observation = Task { await store.start() }; defer { observation.cancel() }
+        try await router.selectConversation(ids[2])
+        await codex.lateUpdate(origin, failure: true)
+        try await routerEventually { store.loadedConversations[origin]?.messages.count == 1 }
+        #expect(store.selectedConversationID == ids[2] && store.modelSelection == cursorModel && store.connection.canSend)
+        try await router.stop(conversationID: origin)
+        #expect(await codex.stops == [origin])
+        #expect(await cursor.stops.isEmpty)
+        #expect(await pi.sends.map(\.model) == [piModel, oauthModel])
+        #expect(await cursor.sends.map(\.model) == [cursorModel])
+        #expect(await codex.sends.map(\.model) == [codexModel])
+        try await router.selectConversation(origin)
+        try await router.shutdown()
+        let reopened = try await ChatBackendRouter.open(pi: pi, cursor: cursor, codex: codex, preferencesURL: url)
+        await reopened.updateProviderStatuses(configured([piModel, oauthModel, cursorModel, codexModel]))
+        #expect(try await reopened.snapshot().selectedConversationID == origin)
+        #expect(try await reopened.snapshot().modelContext?.selection == codexModel)
+        for (id, model) in zip(ids, [piModel, oauthModel, cursorModel, codexModel]) {
+            try await reopened.selectConversation(id)
+            #expect(try await reopened.snapshot().modelContext?.selection == model)
+        }
+        try await reopened.shutdown()
+        let saved = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        #expect(saved["version"] as? Int == 1)
+    }
+
+    @Test func codexPreflightStopAfterSwitchCancelsOnlyCapturedOrigin() async throws {
+        let pi = RoutingFixtureBackend("pi"), cursor = RoutingFixtureBackend("cursor"), codex = RoutingFixtureBackend("codex")
+        let url = try temporaryRoutingURL(); defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let router = try await ChatBackendRouter.open(pi: pi, cursor: cursor, codex: codex, preferencesURL: url)
+        await router.updateProviderStatuses(configured([piModel, cursorModel, codexModel]))
+        try await router.useModel(codexModel)
+        let origin = try await router.createConversation(title: nil)
+        await codex.setDelayedSend()
+        let pending = Task { try await router.send(SendRequest(conversationID: origin, text: "cancel preflight", model: codexModel)) }
+        try await routerEventually { await codex.preparing }
+        try await router.useModel(piModel)
+        let selected = try await router.createConversation(title: nil)
+        try await router.stop(conversationID: origin)
+        await #expect(throws: CancellationError.self) { try await pending.value }
+        #expect(await codex.sends.isEmpty)
+        #expect(await codex.stops == [origin])
+        #expect(await pi.stops.isEmpty)
+        #expect(await cursor.stops.isEmpty)
+        #expect(try await router.snapshot().selectedConversationID == selected)
+        try await router.shutdown()
+    }
+}
+
+extension RouterTests {
+    @Test func codexOwnedProcessesPreflightAndLockAreReleasedThroughRouterShutdown() async throws {
+        let f = try CodexFixture(); defer { f.clean() }
+        let settings = try await f.settings(), backend = try f.backend(settings: settings)
+        let pi = RoutingFixtureBackend("pi"), cursor = RoutingFixtureBackend("cursor")
+        let router = try await ChatBackendRouter.open(pi: pi, cursor: cursor, codex: backend,
+            preferencesURL: f.root.appendingPathComponent("routing.json"))
+        await router.updateProviderStatuses(try await settings.snapshot() + configured([cursorModel]))
+        try await router.useModel(f.model)
+        let origin = try await router.createConversation(title: "Owned Codex")
+        try await router.send(SendRequest(conversationID: origin, text: "hang", model: f.model))
+        try await routerEventually { (try? await backend.snapshot().loadedConversations.first?.messages.last?.content) == "Hel" }
+        try await router.useModel(cursorModel)
+        let selected = try await router.createConversation(title: "Selected Cursor")
+        try await router.stop(conversationID: origin)
+        let stopped = try #require(try await backend.snapshot().loadedConversations.first)
+        #expect(stopped.messages.last?.status == .stopped && stopped.messages.last?.content == "Hel")
+        #expect(try await router.snapshot().selectedConversationID == selected)
+        #expect(try f.calls("turn/interrupt").count == 1)
+        try f.marker("preflight")
+        let pending = Task { try await router.send(SendRequest(conversationID: origin, text: "never admitted", model: f.model)) }
+        try await routerEventually { FileManager.default.fileExists(atPath: f.root.appendingPathComponent("probing").path) }
+        // Concurrent shutdown callers both await cleanup. Keep the backend and router alive throughout.
+        async let one: Void = router.shutdown()
+        async let two: Void = router.shutdown()
+        _ = try await (one, two)
+        await #expect(throws: (any Error).self) { try await pending.value }
+        #expect(try f.calls("turn/start").count == 1)
+        let reopened = try f.backend(settings: settings)
+        #expect(try await reopened.snapshot().loadedConversations.first == stopped)
+        await reopened.shutdown(); await settings.shutdown()
+        for call in try f.calls("launch") {
+            let pid = try #require(call["pid"] as? Int32)
+            #expect(kill(pid, 0) != 0)
+        }
     }
 }

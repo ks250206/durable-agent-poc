@@ -5,23 +5,27 @@ import Foundation
 public actor CompositeProviderSettingsService: ProviderSettingsService {
     private let pi: any ProviderSettingsService
     private let cursor: any ProviderSettingsService
+    private let codex: (any ProviderSettingsService)?
     private var onSnapshot: (@Sendable ([ProviderStatus]) async -> Void)?
     private var reads: [UUID: Task<[ProviderStatus], any Error>] = [:]
     private var operations: [UUID: Task<Void, any Error>] = [:]
     private var closed = false
+    private var shutdownFinished = false
+    private var shutdownWaiters: [CheckedContinuation<Void, Never>] = []
 
-    public init(pi: any ProviderSettingsService, cursor: any ProviderSettingsService) {
-        self.pi = pi; self.cursor = cursor
+    public init(pi: any ProviderSettingsService, cursor: any ProviderSettingsService, codex: (any ProviderSettingsService)? = nil) {
+        self.pi = pi; self.cursor = cursor; self.codex = codex
     }
     public func setObserver(_ observer: @escaping @Sendable ([ProviderStatus]) async -> Void) { onSnapshot = observer }
     public func snapshot() async throws -> [ProviderStatus] {
         guard !closed else { throw CancellationError() }
         let id = UUID()
-        let task = Task { [pi, cursor] in
+        let task = Task { [pi, cursor, codex] in
             try Task.checkCancellation()
             async let piStatuses = pi.snapshot()
             async let cursorStatuses = cursor.snapshot()
-            return try await piStatuses + cursorStatuses
+            async let codexStatuses = codex?.snapshot() ?? []
+            return try await piStatuses + cursorStatuses + codexStatuses
         }
         reads[id] = task
         defer { reads.removeValue(forKey: id) }
@@ -33,7 +37,13 @@ public actor CompositeProviderSettingsService: ProviderSettingsService {
     }
     private func service(for account: ProviderAccount) throws -> any ProviderSettingsService {
         guard let route = ChatBackendRouter.route(for: account) else { throw ChatBackendError.noModel }
-        return route == .pi ? pi : cursor
+        switch route {
+        case .pi: return pi
+        case .cursor: return cursor
+        case .codex:
+            guard let codex else { throw ChatBackendError.noModel }
+            return codex
+        }
     }
     private func perform(_ operation: @escaping @Sendable () async throws -> Void) async throws {
         guard !closed else { throw CancellationError() }
@@ -68,14 +78,20 @@ public actor CompositeProviderSettingsService: ProviderSettingsService {
         await cursor.cancelLogin(to: CursorProviderSettingsService.account)
     }
     public func shutdown() async {
-        guard !closed else { return }
+        if closed {
+            if !shutdownFinished { await withCheckedContinuation { shutdownWaiters.append($0) } }
+            return
+        }
         closed = true; onSnapshot = nil
         let pendingReads = Array(reads.values), pendingOperations = Array(operations.values)
         for task in pendingReads { task.cancel() }
         for task in pendingOperations { task.cancel() }
         await cancelAuthentication()
+        if let codex = codex as? CodexProviderSettingsService { await codex.shutdown() }
         for task in pendingReads { _ = await task.result }
         for task in pendingOperations { _ = await task.result }
         reads.removeAll(); operations.removeAll()
+        shutdownFinished = true
+        for waiter in shutdownWaiters { waiter.resume() }; shutdownWaiters.removeAll()
     }
 }

@@ -5,6 +5,30 @@ import Testing
 import Darwin
 
 @Suite(.serialized) struct CodexRuntimeTests {
+    @Test func explicitLockReleaseDoesNotWaitForInheritedDescriptorToClose() throws {
+        let f = try CodexFixture(); defer { f.clean() }
+        let owner = try CodexStorageLock(directory: f.root)
+        let lockPath = f.root.appendingPathComponent("runtime.lock").path
+        // A concurrent fork can transiently inherit even CLOEXEC descriptors before exec.
+        // dup shares the same open file description and deterministically models that window.
+        var expected = stat()
+        try #require(lstat(lockPath, &expected) == 0)
+        let descriptor = try #require((0..<Int32(1024)).first { fd in
+            var actual = stat()
+            return fstat(fd, &actual) == 0 && actual.st_ino == expected.st_ino && actual.st_dev == expected.st_dev
+        })
+        let inherited = dup(descriptor)
+        try #require(inherited >= 0)
+        defer { close(inherited) }
+        #expect(throws: CodexRuntimeError.storage) { try CodexStorageLock(directory: f.root) }
+        owner.release()
+        let successor = try CodexStorageLock(directory: f.root)
+        defer { successor.release() }
+        // Releasing the retained old owner again must not unlock the successor.
+        owner.release()
+        #expect(throws: CodexRuntimeError.storage) { try CodexStorageLock(directory: f.root) }
+    }
+
     @Test func archiveSizeBoundaryPreservesReadablePreviousValue() throws {
         let f = try CodexFixture(); defer { f.clean() }
         let archive = f.root.appendingPathComponent("boundary.json")
@@ -78,7 +102,7 @@ import Darwin
         let url = f.storage.appendingPathComponent("preferences.json")
         #expect((try FileManager.default.attributesOfItem(atPath: url.path)[.posixPermissions] as? NSNumber)?.intValue == 0o600)
         #expect(!String(decoding: try Data(contentsOf: url), as: UTF8.self).contains("fake-key"))
-        #expect(ChatBackendRouter.route(for: f.model.account) == nil) // #21 has not been wired.
+        #expect(ChatBackendRouter.route(for: f.model.account) == .codex) // #21 connects this exact account to the third route.
         await service.shutdown()
     }
 
