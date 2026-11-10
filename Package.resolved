@@ -1,0 +1,14 @@
+{
+  "originHash" : "fb3d79356ffb3b76e8ae6f9cbf7bea978145560e7ab6f7bef71fa8986a98ca47",
+  "pins" : [
+    {
+      "identity" : "pidurablekit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/finnvoor/PiDurableKit",
+      "state" : {
+        "revision" : "4e1120bbdc7c5329a2f3c05a22bec4b9c9a076bb"
+      }
+    }
+  ],
+  "version" : 3
+}
